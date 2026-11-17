@@ -1,0 +1,7 @@
+name: Greeting brick
+component: NumenCode\Bricks\Tests\Fixtures\Components\Greeting
+fields:
+    tone:
+        label: Mood
+    loud:
+        hidden: true

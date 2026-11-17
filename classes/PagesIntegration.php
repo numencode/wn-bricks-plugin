@@ -26,6 +26,7 @@ class PagesIntegration
     public static function register(): void
     {
         Event::listen('backend.form.extendFieldsBefore', [static::class, 'extendForm']);
+        Event::listen('cms.page.initComponents', [ComponentBricks::class, 'addComponents']);
     }
 
     public static function extendForm(Form $form): void

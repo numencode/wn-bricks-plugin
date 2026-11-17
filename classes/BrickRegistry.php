@@ -12,10 +12,11 @@ use Winter\Storm\Support\Traits\Singleton;
 /**
  * Collects the brick types. Later sources replace earlier ones with the same code:
  *
- * 1. NumenCode.Bricks' own base set (Plugin::registerBricks())
- * 2. other plugins' registerBricks(): ['code' => '$/author/plugin/bricks/code'] (path without extension)
- * 3. callbacks added with registerCallback() (they call registerBricks() on the registry)
- * 4. the theme's bricks/<code>.yaml
+ * 1. snippet components (Winter.Pages snippets, see config "snippets" and ComponentBricks)
+ * 2. NumenCode.Bricks' own base set (Plugin::registerBricks())
+ * 3. other plugins' registerBricks(): ['code' => '$/author/plugin/bricks/code'] (path without extension)
+ * 4. callbacks added with registerCallback() (they call registerBricks() on the registry)
+ * 5. the theme's bricks/<code>.yaml
  *
  * Markup: a theme's partials/bricks/<code>.htm is used before the type's own <code>.htm. A theme definition that
  * replaces a plugin type keeps that type's markup as the fallback.
@@ -147,7 +148,7 @@ class BrickRegistry
             $callback($this);
         }
 
-        $types = [];
+        $types = ComponentBricks::snippetTypes($theme);
 
         foreach ($this->registrations as $code => [$path]) {
             $base = preg_replace('/\.(yaml|htm)$/', '', File::symbolizePath($path));

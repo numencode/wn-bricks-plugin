@@ -1,0 +1,202 @@
+<?php
+
+declare(strict_types=1);
+
+namespace NumenCode\Bricks\Classes;
+
+use Cms\Classes\ComponentBase;
+use Cms\Classes\ComponentHelpers;
+use Cms\Classes\Controller;
+use Cms\Classes\Page as CmsPage;
+use Cms\Classes\Theme;
+use Config;
+use Log;
+use Str;
+use Winter\Pages\Classes\Page;
+use Winter\Pages\Classes\SnippetManager;
+
+/**
+ * Component bricks: a brick that runs a CMS component with the brick's values as its properties.
+ *
+ * - Brick types come from snippet components (config "snippets") and from definitions with a "component" key.
+ * - Their form fields are generated from the component's properties; the definition's "fields" override them.
+ * - On the frontend the components of the static page's bricks are added in cms.page.initComponents (like Pages
+ *   adds snippet components), so their onRun() and AJAX handlers work; renderBrick() renders them.
+ */
+class ComponentBricks
+{
+    public const DEFAULT_ICON = 'icon-puzzle-piece';
+
+    /**
+     * Inspector property types => backend form field types. Other types become text fields.
+     */
+    public const FIELD_TYPES = [
+        'string'   => 'text',
+        'text'     => 'textarea',
+        'dropdown' => 'dropdown',
+        'checkbox' => 'checkbox',
+        'set'      => 'checkboxlist',
+    ];
+
+    /**
+     * Brick types for the snippet components, by snippet code (made a valid brick code).
+     *
+     * @return array<string, BrickType>
+     */
+    public static function snippetTypes(?Theme $theme): array
+    {
+        $setting = Config::get('numencode.bricks::snippets', true);
+
+        if ($setting === false || !$theme || !class_exists(SnippetManager::class)) {
+            return [];
+        }
+
+        $allowed = is_array($setting) ? array_map(fn ($class) => ltrim((string) $class, '\\'), $setting) : null;
+        $types = [];
+
+        foreach (SnippetManager::instance()->listSnippets($theme) as $snippet) {
+            if (!$class = $snippet->getComponentClass()) {
+                continue;
+            }
+
+            $class = ltrim($class, '\\');
+
+            if (($allowed !== null && !in_array($class, $allowed, true)) || !$component = static::makeComponent($class)) {
+                continue;
+            }
+
+            $code = Str::kebab((string) $snippet->code);
+            $details = $component->componentDetails();
+
+            $types[$code] = BrickType::fromArray($code, [
+                'name'        => $details['name'] ?? class_basename($class),
+                'description' => $details['description'] ?? '',
+                'icon'        => self::DEFAULT_ICON,
+                'component'   => $class,
+            ], null, 'snippet ' . $class);
+        }
+
+        return $types;
+    }
+
+    /**
+     * Form fields of a component brick: its properties as fields, with the definition's fields merged over them
+     * (e.g. `layout: {hidden: true}`, or a different label).
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    public static function fields(BrickType $type): array
+    {
+        if (!$type->isComponent() || !$component = static::makeComponent($type->component)) {
+            return $type->fields;
+        }
+
+        $fields = [];
+
+        foreach (ComponentHelpers::getComponentsPropertyConfig($component, false, true) as $property) {
+            $name = $property['property'];
+
+            if (!in_array($name, BrickType::RESERVED_FIELDS, true)) {
+                $fields[$name] = static::propertyField($property, $component);
+            }
+        }
+
+        foreach ($type->fields as $name => $override) {
+            $fields[$name] = array_replace($fields[$name] ?? [], $override);
+        }
+
+        return $fields;
+    }
+
+    /**
+     * A backend form field for one component property (Inspector format, already translated by ComponentHelpers).
+     *
+     * @param array<string, mixed> $property
+     * @return array<string, mixed>
+     */
+    public static function propertyField(array $property, ComponentBase $component): array
+    {
+        $type = self::FIELD_TYPES[$property['type'] ?? 'string'] ?? 'text';
+        $field = ['label' => $property['title'] ?? $property['property'], 'type' => $type];
+
+        foreach (['description' => 'comment', 'default' => 'default', 'placeholder' => 'placeholder'] as $from => $to) {
+            if (isset($property[$from]) && $property[$from] !== '') {
+                $field[$to] = $property[$from];
+            }
+        }
+
+        if (in_array($type, ['dropdown', 'checkboxlist'], true)) {
+            $field['options'] = $property['options'] ?? static::propertyOptions($component, $property['property']);
+        }
+
+        if (!empty($property['required']) || isset($property['validation']['required'])) {
+            $field['required'] = true;
+        }
+
+        return $field;
+    }
+
+    /**
+     * Dynamic options of a property, the same way the Inspector gets them.
+     *
+     * @return array<int|string, string>
+     */
+    public static function propertyOptions(ComponentBase $component, string $property): array
+    {
+        $method = 'get' . ucfirst($property) . 'Options';
+
+        $options = method_exists($component, $method) ? $component->{$method}() : $component->getPropertyOptions($property);
+
+        return is_array($options) ? $options : [];
+    }
+
+    /**
+     * Adds the components of the static page's component bricks to the CMS page (cms.page.initComponents).
+     */
+    public static function addComponents(Controller $controller, CmsPage $page): void
+    {
+        $staticPage = $page->apiBag['staticPage'] ?? null;
+
+        if (!$staticPage instanceof Page) {
+            return;
+        }
+
+        $registry = BrickRegistry::instance();
+
+        foreach (BrickRenderer::fieldNames($staticPage) as $field) {
+            foreach (BrickRenderer::bricks($staticPage, $field) as $index => $brick) {
+                $type = $registry->get((string) ($brick['_group'] ?? ''), $controller->getTheme());
+
+                if (!$type?->isComponent()) {
+                    continue;
+                }
+
+                $properties = array_diff_key($brick, array_flip(BrickType::RESERVED_FIELDS));
+                $controller->addComponent($type->component, static::alias($field, $index), $properties, true);
+            }
+        }
+    }
+
+    /**
+     * The alias of a component brick's component on the CMS page.
+     */
+    public static function alias(string $field, int $index): string
+    {
+        return 'brick_' . preg_replace('/\W/', '_', $field) . '_' . $index;
+    }
+
+    protected static function makeComponent(string $class): ?ComponentBase
+    {
+        if (!class_exists($class) || !is_subclass_of($class, ComponentBase::class)) {
+            return null;
+        }
+
+        try {
+            return new $class();
+        } catch (\Throwable $exception) {
+            Log::warning(sprintf('NumenCode.Bricks: component %s could not be created: %s', $class, $exception->getMessage()));
+
+            return null;
+        }
+    }
+}

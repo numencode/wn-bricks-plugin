@@ -44,7 +44,26 @@ abstract class BricksTestCase extends PluginTestCase
         config(['cms.activeTheme' => $name]);
         Theme::resetCache();
 
-        return Theme::getActiveTheme();
+        $theme = Theme::getActiveTheme();
+
+        // CMS objects without their own datasource (e.g. $page->theme) use the resolver's default, which was set
+        // to the test environment's theme when the app booted
+        \Cms\Classes\CmsObject::getDatasourceResolver()->setDefaultDatasource($theme->getDirName());
+
+        return $theme;
+    }
+
+    /**
+     * Registers the fixture component Greeting (code "greeting").
+     */
+    protected function registerGreeting(): void
+    {
+        require_once $this->fixturePath('components/Greeting.php');
+
+        // Load the registered components first; registering one before that would skip all the others
+        $manager = \Cms\Classes\ComponentManager::instance();
+        $manager->listComponents();
+        $manager->registerComponent(\NumenCode\Bricks\Tests\Fixtures\Components\Greeting::class, 'greeting');
     }
 
     protected function fixturePath(string $path = ''): string

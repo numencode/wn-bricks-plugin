@@ -1,0 +1,9 @@
+description = "Bricks layout"
+
+[staticPage]
+==
+{variable type="bricks" name="bricks" tab="Content"}{/variable}
+{variable type="bricks" name="aside" tab="Aside" allow="text"}{/variable}
+<main>{{ renderBricks() }}</main>
+<aside>{{ renderBricks('aside') }}</aside>
+<loop>{% for brick in bricks %}{{ renderBrick(brick, loop.index0) }}{% endfor %}</loop>

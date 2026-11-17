@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NumenCode\Bricks;
 
+use NumenCode\Bricks\Classes\BrickRenderer;
 use NumenCode\Bricks\Classes\PagesIntegration;
 use System\Classes\PluginBase;
 
@@ -25,6 +26,16 @@ class Plugin extends PluginBase
     public function boot(): void
     {
         PagesIntegration::register();
+    }
+
+    public function registerMarkupTags(): array
+    {
+        return [
+            'functions' => [
+                'renderBricks' => [BrickRenderer::class, 'renderBricksFunction'],
+                'renderBrick'  => [BrickRenderer::class, 'renderBrickFunction'],
+            ],
+        ];
     }
 
     /**

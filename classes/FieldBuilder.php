@@ -34,7 +34,7 @@ class FieldBuilder
                 'name'        => $type->name,
                 'description' => $type->description,
                 'icon'        => $type->icon,
-                'fields'      => $type->fields,
+                'fields'      => $type->isComponent() ? ComponentBricks::fields($type) : $type->fields,
             ];
         }
 
