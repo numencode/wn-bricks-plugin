@@ -41,6 +41,34 @@ class FieldBuilderTest extends BricksTestCase
         $this->assertArrayNotHasKey('ignore', $field);
     }
 
+    public function testTheContainerCarriesTheClientConfig(): void
+    {
+        $this->useFixtureTheme();
+        $types = BrickRegistry::instance()->filter(['text', 'video', 'columns']);
+
+        $field = FieldBuilder::field(['type' => 'bricks', 'containerAttributes' => ['data-x' => '1']], $types);
+        $config = json_decode($field['containerAttributes']['data-bricks'], true);
+
+        $this->assertSame('1', $field['containerAttributes']['data-x'], 'own container attributes are kept');
+        $this->assertSame(['video' => 'title', 'columns' => 'column_1'], $config['titleFrom']);
+        $this->assertSame('Expand all', $config['expandAll']);
+        $this->assertSame('Collapse all', $config['collapseAll']);
+        $this->assertArrayNotHasKey('data-bricks-hidden', $field['containerAttributes']);
+
+        $this->assertSame([], $config['edit'], 'no type with an edit URL');
+
+        // A component brick with an edit URL
+        $this->registerGreeting();
+        $config = json_decode(FieldBuilder::clientConfig(BrickRegistry::instance()->filter(['greeting'])), true);
+
+        $this->assertSame(['greeting'], array_keys($config['edit']));
+        $this->assertSame(\Backend::url('acme/greetings/update') . '/{name}', $config['edit']['greeting']['url']);
+        $this->assertStringStartsWith('Edit ', $config['edit']['greeting']['label']);
+
+        // Types without titleFrom: an empty JSON object, not a list
+        $this->assertSame('{}', json_encode(json_decode(FieldBuilder::clientConfig(BrickRegistry::instance()->filter(['text'])))->titleFrom));
+    }
+
     public function testOptionsFromTheDefinitionWinExceptTypeAndGroups(): void
     {
         $this->useFixtureTheme();

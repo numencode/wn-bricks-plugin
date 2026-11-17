@@ -28,3 +28,4 @@ fields:
             action: show
             field: columns
             condition: value[3]
+titleFrom: column_1

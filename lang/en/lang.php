@@ -5,6 +5,7 @@ return [
         'name'        => 'Bricks',
         'description' => 'Translatable block-based content builder for static pages.',
     ],
+    'edit_link'   => 'Edit :type',
     'permissions' => [
         'use_html' => 'Add and edit HTML bricks',
         'denied'   => "You don't have permission to add or change \":type\" bricks.",

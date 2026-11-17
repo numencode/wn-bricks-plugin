@@ -88,7 +88,7 @@ class PagesIntegrationTest extends BricksTestCase
         $user->permissions = ['numencode.bricks.use_html' => 1];
         $field = PagesIntegration::replaceFields($fields, $page, null, false, $user)['viewBag[bricks]'];
 
-        $this->assertArrayNotHasKey('containerAttributes', $field);
+        $this->assertArrayNotHasKey('data-bricks-hidden', $field['containerAttributes']);
         $this->assertArrayNotHasKey('readOnly', $field['groups']['html']['fields']['html']);
     }
 

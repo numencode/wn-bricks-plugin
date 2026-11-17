@@ -11,3 +11,4 @@ fields:
         comment: numencode.bricks::lang.fields.video_title_comment
         type: text
         translatable: true
+titleFrom: title

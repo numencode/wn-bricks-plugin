@@ -66,6 +66,44 @@ class BrickTypeTest extends BricksTestCase
         $this->assertTrue($list->isAllowedFor($user), 'any of the permissions is enough');
     }
 
+    public function testTitleFrom(): void
+    {
+        $fields = ['url' => ['type' => 'text'], 'title' => ['type' => 'text']];
+
+        $this->assertNull(BrickType::fromArray('video', ['name' => 'Video', 'fields' => $fields], 'v.htm')->titleFrom);
+        $this->assertSame('title', BrickType::fromArray('video', [
+            'name'      => 'Video',
+            'fields'    => $fields,
+            'titleFrom' => 'title',
+        ], 'v.htm')->titleFrom);
+
+        // A component's properties are only known later, so any name is accepted
+        $this->assertSame('group', BrickType::fromArray('counters', [
+            'name'      => 'Counters',
+            'component' => 'NumenCode\Widgets\Components\Counters',
+            'titleFrom' => 'group',
+        ])->titleFrom);
+    }
+
+    public function testEditUrlPattern(): void
+    {
+        $make = fn (array $config) => BrickType::fromArray('box', ['name' => 'Box'] + $config, 'b.htm');
+
+        $this->assertNull($make([])->editUrlPattern());
+        $this->assertNull($make(['editUrl' => ' '])->editUrlPattern());
+
+        // A path is a backend URL; the placeholders keep their braces
+        $this->assertSame(\Backend::url('acme/boxes/update') . '/{id}', $make(['editUrl' => '/acme/boxes/update/{id}'])->editUrlPattern());
+        $this->assertSame('https://example.com/edit/{id}', $make(['editUrl' => 'https://example.com/edit/{id}'])->editUrlPattern());
+
+        // A component brick: the component's static bricksEditUrl()
+        require_once $this->fixturePath('components/Greeting.php');
+        $component = fn (string $class) => BrickType::fromArray('box', ['name' => 'Box', 'component' => $class]);
+
+        $this->assertSame(\Backend::url('acme/greetings/update') . '/{name}', $component(\NumenCode\Bricks\Tests\Fixtures\Components\Greeting::class)->editUrlPattern());
+        $this->assertNull($component(\Cms\Components\ViewBag::class)->editUrlPattern(), 'components without the method');
+    }
+
     public function testAComponentBrickNeedsNoFieldsOrMarkup(): void
     {
         $type = BrickType::fromArray('counters', [
@@ -100,6 +138,8 @@ class BrickTypeTest extends BricksTestCase
             'no fields, no markup'    => ['q', ['name' => 'Q'], null, 'no markup found'],
             'permissions not strings' => ['q', ['name' => 'Q', 'permissions' => [['x']]], 'm.htm', '"permissions" must be'],
             'permissions a number'    => ['q', ['name' => 'Q', 'permissions' => 5], 'm.htm', '"permissions" must be'],
+            'titleFrom not a string'  => ['q', ['name' => 'Q', 'fields' => $fields, 'titleFrom' => ['text']], 'm.htm', '"titleFrom" must be a string'],
+            'titleFrom unknown field' => ['q', ['name' => 'Q', 'fields' => $fields, 'titleFrom' => 'title'], 'm.htm', 'names the field "title"'],
         ];
     }
 

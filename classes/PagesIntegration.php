@@ -36,6 +36,7 @@ class PagesIntegration
 
         if (class_exists(\Winter\Pages\Controllers\Index::class)) {
             \Winter\Pages\Controllers\Index::extend(function ($controller) {
+                $controller->addCss('/plugins/numencode/bricks/assets/css/bricks.css', 'NumenCode.Bricks');
                 $controller->addJs('/plugins/numencode/bricks/assets/js/bricks.js', 'NumenCode.Bricks');
             });
         }

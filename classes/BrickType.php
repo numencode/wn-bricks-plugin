@@ -17,7 +17,7 @@ final class BrickType
     /**
      * Keys allowed in a definition file.
      */
-    public const KEYS = ['name', 'description', 'icon', 'fields', 'component', 'permissions'];
+    public const KEYS = ['name', 'description', 'icon', 'fields', 'component', 'permissions', 'titleFrom', 'editUrl'];
 
     /**
      * Field names a brick type cannot use: "_group" stores the type code, "brick" is a template variable.
@@ -32,6 +32,8 @@ final class BrickType
      * @param string|null $markupPath The type's own markup file (a theme partial takes precedence when rendering)
      * @param string $source Where the definition comes from, for error messages
      * @param array<int, string> $permissions Backend permissions needed to add or edit the brick (any of them)
+     * @param string|null $titleFrom The field whose value is shown on a collapsed brick (default: the first filled field)
+     * @param string|null $editUrl Backend URL (pattern) where the brick's content is edited, {field} = a field's value
      */
     public function __construct(
         public readonly string $code,
@@ -43,6 +45,8 @@ final class BrickType
         public readonly ?string $markupPath = null,
         public readonly string $source = '',
         public readonly array $permissions = [],
+        public readonly ?string $titleFrom = null,
+        public readonly ?string $editUrl = null,
     ) {
     }
 
@@ -88,7 +92,7 @@ final class BrickType
             throw $fail('"name" is required');
         }
 
-        foreach (['description', 'icon', 'component'] as $key) {
+        foreach (['description', 'icon', 'component', 'titleFrom', 'editUrl'] as $key) {
             if (isset($config[$key]) && !is_string($config[$key])) {
                 throw $fail("\"{$key}\" must be a string");
             }
@@ -109,6 +113,11 @@ final class BrickType
             if (in_array($name, self::RESERVED_FIELDS, true)) {
                 throw $fail("the field name \"{$name}\" is reserved");
             }
+        }
+
+        // A component's properties are only known when its fields are built
+        if (isset($config['titleFrom']) && $component === null && !isset($fields[$config['titleFrom']])) {
+            throw $fail("\"titleFrom\" names the field \"{$config['titleFrom']}\", which the type doesn't have");
         }
 
         // A type without fields (e.g. a divider) only needs markup
@@ -133,6 +142,8 @@ final class BrickType
             markupPath: $markupPath,
             source: $source,
             permissions: array_values($permissions),
+            titleFrom: $config['titleFrom'] ?? null,
+            editUrl: $config['editUrl'] ?? null,
         );
     }
 
@@ -147,6 +158,30 @@ final class BrickType
     public function isAllowedFor(?\Backend\Models\User $user): bool
     {
         return !$this->permissions || ($user !== null && $user->hasAnyAccess($this->permissions));
+    }
+
+    /**
+     * Where the brick's content is edited, as a URL pattern ({field} is replaced with the field's value in the
+     * browser): the definition's editUrl, else the component's static bricksEditUrl() (a component brick's plugin
+     * declares it, e.g. NumenCode.Widgets: "numencode/widgets/features/update/{group}"). A path is a backend URL.
+     * Null: no link (also when the component returns null, e.g. without the permission to edit it).
+     */
+    public function editUrlPattern(): ?string
+    {
+        $pattern = $this->editUrl;
+
+        if ($pattern === null && $this->component !== null && method_exists($this->component, 'bricksEditUrl')) {
+            $pattern = $this->component::bricksEditUrl();
+        }
+
+        if (!is_string($pattern) || trim($pattern) === '') {
+            return null;
+        }
+
+        $url = preg_match('#^(https?:)?//#i', $pattern) ? $pattern : \Backend::url(ltrim($pattern, '/'));
+
+        // The URL generator encodes the placeholders' braces
+        return str_ireplace(['%7B', '%7D'], ['{', '}'], $url);
     }
 
     /**

@@ -5,6 +5,7 @@ return [
         'name'        => 'Gradniki',
         'description' => 'Prevedljiv urejevalnik vsebine statičnih strani iz gradnikov.',
     ],
+    'edit_link'   => 'Uredi: :type',
     'permissions' => [
         'use_html' => 'Dodajanje in urejanje gradnikov HTML',
         'denied'   => 'Nimate dovoljenja za dodajanje ali spreminjanje gradnikov »:type«.',

@@ -74,14 +74,48 @@ class FieldBuilder
             ['type' => 'repeater', 'groups' => self::groups($types, $readOnly)],
         );
 
+        $attributes = ['data-bricks' => static::clientConfig($types)];
+
         if ($hidden) {
-            $field['containerAttributes'] = array_merge(
-                (array) ($field['containerAttributes'] ?? []),
-                ['data-bricks-hidden' => implode(',', $hidden)],
-            );
+            $attributes['data-bricks-hidden'] = implode(',', $hidden);
         }
 
+        $field['containerAttributes'] = array_merge((array) ($field['containerAttributes'] ?? []), $attributes);
+
         return $field;
+    }
+
+    /**
+     * The settings assets/js/bricks.js reads from the field's container (data-bricks, JSON): the titleFrom field of
+     * each type that has one, the edit links (URL pattern and label) and the labels of the "Expand all" / "Collapse all"
+     * buttons.
+     *
+     * @param array<string, BrickType> $types
+     */
+    public static function clientConfig(array $types): string
+    {
+        $titleFrom = [];
+        $edit = [];
+
+        foreach ($types as $code => $type) {
+            if ($type->titleFrom !== null) {
+                $titleFrom[$code] = $type->titleFrom;
+            }
+
+            if ($url = $type->editUrlPattern()) {
+                $edit[$code] = [
+                    'url'   => $url,
+                    'label' => \Lang::get('numencode.bricks::lang.edit_link', ['type' => $type->label()]),
+                ];
+            }
+        }
+
+        return json_encode([
+            'titleFrom'   => (object) $titleFrom,
+            'edit'        => (object) $edit,
+            'expandAll'   => \Lang::get('numencode.fundamentals::lang.repeater.expand_all'),
+            'collapseAll' => \Lang::get('numencode.fundamentals::lang.repeater.collapse_all'),
+        ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
     }
 
     /**

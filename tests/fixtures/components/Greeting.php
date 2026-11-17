@@ -51,6 +51,14 @@ class Greeting extends ComponentBase
     /**
      * @return array<string, string>
      */
+    /**
+     * NumenCode.Bricks: where a greeting brick's content is edited ("Edit …" link).
+     */
+    public static function bricksEditUrl(): ?string
+    {
+        return 'acme/greetings/update/{name}';
+    }
+
     public function getToneOptions(): array
     {
         return ['warm' => 'Warm', 'cool' => 'Cool'];
