@@ -1,0 +1,45 @@
+{
+    "name": "numencode/wn-bricks-plugin",
+    "description": "Translatable, block-based content builder for Winter CMS static pages: editors compose pages from bricks defined as YAML fields and Twig markup in plugins or themes.",
+    "type": "winter-plugin",
+    "homepage": "https://www.numencode.com",
+    "keywords": ["winter cms", "winter", "plugin", "laravel", "numencode", "bricks", "blocks", "page builder", "static pages", "translate"],
+    "license": "MIT",
+    "support": {
+        "issues": "https://github.com/numencode/wn-bricks-plugin/issues",
+        "source": "https://github.com/numencode/wn-bricks-plugin"
+    },
+    "authors": [
+        {
+            "name": "Blaz Orazem",
+            "email": "blaz@orazem.si",
+            "homepage": "https://orazem.si/",
+            "role": "Maintainer"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "composer/installers": "^1.0 || ^2.0",
+        "numencode/wn-fundamentals-plugin": "^2.1"
+    },
+    "suggest": {
+        "winter/wn-pages-plugin": "Enables bricks on static pages.",
+        "winter/wn-translate-plugin": "Enables translations of the bricks per locale."
+    },
+    "autoload": {
+        "psr-4": {
+            "NumenCode\\Bricks\\": ""
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "composer/installers": true
+        },
+        "sort-packages": true
+    },
+    "extra": {
+        "installer-name": "bricks"
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
