@@ -15,6 +15,10 @@ return [
             'description' => 'Oblikovano besedilo z odstavki, seznami in povezavami.',
         ],
     ],
+    'field' => [
+        'label'  => 'Gradniki',
+        'prompt' => 'Dodaj gradnik',
+    ],
     'fields' => [
         'level' => 'Raven',
     ],

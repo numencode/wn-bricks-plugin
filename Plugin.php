@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NumenCode\Bricks;
 
+use NumenCode\Bricks\Classes\PagesIntegration;
 use System\Classes\PluginBase;
 
 class Plugin extends PluginBase
@@ -19,6 +20,11 @@ class Plugin extends PluginBase
             'icon'        => 'icon-cubes',
             'homepage'    => 'https://www.numencode.com',
         ];
+    }
+
+    public function boot(): void
+    {
+        PagesIntegration::register();
     }
 
     /**

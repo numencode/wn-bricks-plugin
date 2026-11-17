@@ -15,6 +15,10 @@ return [
             'description' => 'Formatted text with paragraphs, lists and links.',
         ],
     ],
+    'field' => [
+        'label'  => 'Bricks',
+        'prompt' => 'Add brick',
+    ],
     'fields' => [
         'level' => 'Level',
     ],
