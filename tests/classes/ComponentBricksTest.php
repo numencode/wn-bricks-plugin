@@ -74,7 +74,7 @@ class ComponentBricksTest extends BricksTestCase
         }
 
         $this->addSnippet('helloSnippet');
-        $type = BrickRegistry::instance()->get('hello-snippet');
+        $type = BrickRegistry::instance()->get('snippet-hello-snippet');
 
         $this->assertNotNull($type);
         $this->assertSame(Greeting::class, $type->component);
@@ -92,27 +92,28 @@ class ComponentBricksTest extends BricksTestCase
         $this->addSnippet('helloSnippet');
 
         config(['numencode.bricks::snippets' => ['Some\\Other\\Component']]);
-        $this->assertFalse(BrickRegistry::instance()->has('hello-snippet'));
+        $this->assertFalse(BrickRegistry::instance()->has('snippet-hello-snippet'));
 
         config(['numencode.bricks::snippets' => ['\\' . Greeting::class]]);
         BrickRegistry::instance()->clearCache();
-        $this->assertTrue(BrickRegistry::instance()->has('hello-snippet'));
+        $this->assertTrue(BrickRegistry::instance()->has('snippet-hello-snippet'));
 
         config(['numencode.bricks::snippets' => false]);
         BrickRegistry::instance()->clearCache();
-        $this->assertFalse(BrickRegistry::instance()->has('hello-snippet'));
+        $this->assertFalse(BrickRegistry::instance()->has('snippet-hello-snippet'));
     }
 
-    public function testExplicitDefinitionsReplaceSnippets(): void
+    public function testSnippetCodesDoNotCollideWithExplicitTypes(): void
     {
         if (!class_exists(SnippetManager::class)) {
             $this->markTestSkipped('Winter.Pages is not installed.');
         }
 
-        // The theme's bricks/greeting.yaml has the same code
+        // The theme's bricks/greeting.yaml and a snippet with the code "greeting": both are offered
         $this->addSnippet('greeting');
 
         $this->assertSame('Greeting brick', BrickRegistry::instance()->get('greeting')->label());
+        $this->assertSame('Greeting', BrickRegistry::instance()->get('snippet-greeting')->label());
     }
 
     public function testAliases(): void

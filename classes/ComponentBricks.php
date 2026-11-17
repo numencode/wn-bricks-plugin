@@ -39,7 +39,13 @@ class ComponentBricks
     ];
 
     /**
-     * Brick types for the snippet components, by snippet code (made a valid brick code).
+     * Brick codes of snippet components start with this, so they can't collide with explicitly defined types
+     * (e.g. the Widgets "gallery" snippet and the base set's "gallery" brick).
+     */
+    public const SNIPPET_PREFIX = 'snippet-';
+
+    /**
+     * Brick types for the snippet components, by code: SNIPPET_PREFIX + the snippet code in kebab case.
      *
      * @return array<string, BrickType>
      */
@@ -65,7 +71,7 @@ class ComponentBricks
                 continue;
             }
 
-            $code = Str::kebab((string) $snippet->code);
+            $code = self::SNIPPET_PREFIX . Str::kebab((string) $snippet->code);
             $details = $component->componentDetails();
 
             $types[$code] = BrickType::fromArray($code, [
