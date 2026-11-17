@@ -1,0 +1,32 @@
+name: numencode.bricks::lang.bricks.gallery.name
+description: numencode.bricks::lang.bricks.gallery.description
+icon: icon-th
+fields:
+    images:
+        label: numencode.bricks::lang.fields.images
+        type: repeater
+        prompt: numencode.bricks::lang.fields.images_prompt
+        style: collapsed
+        titleFrom: caption
+        form:
+            fields:
+                image:
+                    label: numencode.bricks::lang.fields.image
+                    type: mediafinder
+                    mode: image
+                alt:
+                    label: numencode.bricks::lang.fields.alt
+                    type: text
+                    translatable: true
+                caption:
+                    label: numencode.bricks::lang.fields.caption
+                    type: text
+                    translatable: true
+    columns:
+        label: numencode.bricks::lang.fields.columns
+        type: dropdown
+        default: '3'
+        options:
+            '2': '2'
+            '3': '3'
+            '4': '4'

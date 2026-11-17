@@ -1,0 +1,6 @@
+{% set count = columns in ['3', 3] ? 3 : 2 %}
+<div class="brick brick--columns brick--columns-{{ count }}">
+    <div class="brick__column">{{ column_1|raw }}</div>
+    <div class="brick__column">{{ column_2|raw }}</div>
+    {% if count == 3 %}<div class="brick__column">{{ column_3|raw }}</div>{% endif %}
+</div>

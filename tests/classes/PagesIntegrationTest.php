@@ -54,12 +54,42 @@ class PagesIntegrationTest extends BricksTestCase
         $aside = $form->secondaryTabs['fields']['viewBag[aside]'];
 
         $this->assertSame('repeater', $bricks['type']);
-        $this->assertSame(['text', 'quote'], array_keys($bricks['groups']));
         $this->assertSame('Content', $bricks['tab']);
         $this->assertSame('repeater', $aside['type']);
-        $this->assertArrayNotHasKey('heading', $aside['groups']);
-        $this->assertArrayHasKey('quote', $aside['groups']);
         $this->assertSame(['type' => 'text'], $form->fields['viewBag[title]']);
+
+        // The offered types first (allow order), then all other types for existing bricks, hidden in "Add brick"
+        $this->assertSame(['text', 'quote'], array_slice(array_keys($bricks['groups']), 0, 2));
+        $this->assertArrayHasKey('heading', $bricks['groups']);
+        $hidden = explode(',', $bricks['containerAttributes']['data-bricks-hidden']);
+        $this->assertContains('heading', $hidden);
+        $this->assertNotContains('text', $hidden);
+        $this->assertNotContains('quote', $hidden);
+
+        $hidden = explode(',', $aside['containerAttributes']['data-bricks-hidden']);
+        $this->assertContains('heading', $hidden);
+        $this->assertNotContains('quote', $hidden);
+    }
+
+    public function testTypesWithoutPermissionAreHiddenAndReadOnly(): void
+    {
+        $page = new Page();
+        $fields = ['viewBag[bricks]' => ['type' => 'bricks']];
+
+        // No user (or one without numencode.bricks.use_html): the html type is kept but hidden and read-only
+        $field = PagesIntegration::replaceFields($fields, $page, null, false)['viewBag[bricks]'];
+
+        $this->assertContains('html', explode(',', $field['containerAttributes']['data-bricks-hidden']));
+        $this->assertTrue($field['groups']['html']['fields']['html']['readOnly']);
+        $this->assertArrayNotHasKey('readOnly', $field['groups']['text']['fields']['content']);
+
+        // With the permission: offered and editable
+        $user = new \Backend\Models\User();
+        $user->permissions = ['numencode.bricks.use_html' => 1];
+        $field = PagesIntegration::replaceFields($fields, $page, null, false, $user)['viewBag[bricks]'];
+
+        $this->assertArrayNotHasKey('containerAttributes', $field);
+        $this->assertArrayNotHasKey('readOnly', $field['groups']['html']['fields']['html']);
     }
 
     public function testBricksFieldsAreRegisteredAsTranslatableOnce(): void

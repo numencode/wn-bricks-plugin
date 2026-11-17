@@ -1,0 +1,23 @@
+name: numencode.bricks::lang.bricks.button.name
+description: numencode.bricks::lang.bricks.button.description
+icon: icon-hand-pointer-o
+fields:
+    text:
+        label: numencode.bricks::lang.fields.button_text
+        type: text
+        translatable: true
+    url:
+        label: numencode.bricks::lang.fields.url
+        comment: numencode.bricks::lang.fields.url_comment
+        type: text
+    style:
+        label: numencode.bricks::lang.fields.style
+        type: dropdown
+        default: primary
+        options:
+            primary: numencode.bricks::lang.options.style.primary
+            secondary: numencode.bricks::lang.options.style.secondary
+            link: numencode.bricks::lang.options.style.link
+    new_window:
+        label: numencode.bricks::lang.fields.new_window
+        type: checkbox

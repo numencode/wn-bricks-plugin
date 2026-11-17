@@ -17,7 +17,7 @@ final class BrickType
     /**
      * Keys allowed in a definition file.
      */
-    public const KEYS = ['name', 'description', 'icon', 'fields', 'component'];
+    public const KEYS = ['name', 'description', 'icon', 'fields', 'component', 'permissions'];
 
     /**
      * Field names a brick type cannot use: "_group" stores the type code, "brick" is a template variable.
@@ -31,6 +31,7 @@ final class BrickType
      * @param string|null $component Component class of a component brick
      * @param string|null $markupPath The type's own markup file (a theme partial takes precedence when rendering)
      * @param string $source Where the definition comes from, for error messages
+     * @param array<int, string> $permissions Backend permissions needed to add or edit the brick (any of them)
      */
     public function __construct(
         public readonly string $code,
@@ -41,6 +42,7 @@ final class BrickType
         public readonly ?string $component = null,
         public readonly ?string $markupPath = null,
         public readonly string $source = '',
+        public readonly array $permissions = [],
     ) {
     }
 
@@ -109,12 +111,16 @@ final class BrickType
             }
         }
 
-        if (!$fields && $component === null) {
-            throw $fail('either "fields" or "component" is required');
-        }
-
+        // A type without fields (e.g. a divider) only needs markup
         if ($component === null && $markupPath === null) {
             throw $fail('no markup found (a <code>.htm next to the definition or a theme partial bricks/<code>.htm)');
+        }
+
+        $permissions = $config['permissions'] ?? [];
+        $permissions = is_string($permissions) ? [$permissions] : $permissions;
+
+        if (!is_array($permissions) || array_filter($permissions, fn ($permission) => !is_string($permission))) {
+            throw $fail('"permissions" must be a permission code or a list of them');
         }
 
         return new self(
@@ -126,12 +132,21 @@ final class BrickType
             component: $component,
             markupPath: $markupPath,
             source: $source,
+            permissions: array_values($permissions),
         );
     }
 
     public function isComponent(): bool
     {
         return $this->component !== null;
+    }
+
+    /**
+     * Whether a backend user may add and edit bricks of this type (types without permissions: everyone).
+     */
+    public function isAllowedFor(?\Backend\Models\User $user): bool
+    {
+        return !$this->permissions || ($user !== null && $user->hasAnyAccess($this->permissions));
     }
 
     /**

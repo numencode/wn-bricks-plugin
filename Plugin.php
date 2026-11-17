@@ -6,10 +6,16 @@ namespace NumenCode\Bricks;
 
 use NumenCode\Bricks\Classes\BrickRenderer;
 use NumenCode\Bricks\Classes\PagesIntegration;
+use NumenCode\Bricks\Classes\VideoUrl;
 use System\Classes\PluginBase;
 
 class Plugin extends PluginBase
 {
+    /**
+     * The base set: brick codes, in the order of the "Add brick" list.
+     */
+    public const BASE_SET = ['heading', 'text', 'image', 'gallery', 'columns', 'button', 'quote', 'video', 'divider', 'spacer', 'html'];
+
     public $require = ['NumenCode.Fundamentals'];
 
     public function pluginDetails(): array
@@ -28,12 +34,25 @@ class Plugin extends PluginBase
         PagesIntegration::register();
     }
 
+    public function registerPermissions(): array
+    {
+        return [
+            'numencode.bricks.use_html' => [
+                'tab'   => 'numencode.bricks::lang.plugin.name',
+                'label' => 'numencode.bricks::lang.permissions.use_html',
+            ],
+        ];
+    }
+
     public function registerMarkupTags(): array
     {
         return [
             'functions' => [
                 'renderBricks' => [BrickRenderer::class, 'renderBricksFunction'],
                 'renderBrick'  => [BrickRenderer::class, 'renderBrickFunction'],
+            ],
+            'filters' => [
+                'bricksVideoUrl' => [VideoUrl::class, 'embed'],
             ],
         ];
     }
@@ -45,9 +64,12 @@ class Plugin extends PluginBase
      */
     public function registerBricks(): array
     {
-        return [
-            'heading' => '$/numencode/bricks/bricks/heading',
-            'text'    => '$/numencode/bricks/bricks/text',
-        ];
+        $bricks = [];
+
+        foreach (self::BASE_SET as $code) {
+            $bricks[$code] = '$/numencode/bricks/bricks/' . $code;
+        }
+
+        return $bricks;
     }
 }

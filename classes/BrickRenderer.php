@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NumenCode\Bricks\Classes;
 
 use Cms\Classes\Controller;
+use Cms\Classes\Partial;
 use Config;
 use Log;
 use Winter\Pages\Classes\Page;
@@ -107,13 +108,13 @@ class BrickRenderer
         $vars = array_diff_key($brick, array_flip(BrickType::RESERVED_FIELDS));
         $vars['brick'] = ['code' => $code, 'index' => $index, 'field' => $field];
 
-        $html = $this->controller->renderPartial('bricks/' . $code, $vars, false);
-
-        if ($html === false && $type->markupPath !== null) {
-            $html = $this->renderFile($type->markupPath, $vars);
+        // Check the theme partial first: renderPartial() keeps the merged variables when it returns false for a
+        // missing partial, so the next brick (and the page) would see this brick's values
+        if (Partial::loadCached($this->controller->getTheme(), 'bricks/' . $code)) {
+            return (string) $this->controller->renderPartial('bricks/' . $code, $vars);
         }
 
-        return is_string($html) ? $html : '';
+        return $type->markupPath !== null ? $this->renderFile($type->markupPath, $vars) : '';
     }
 
     /**

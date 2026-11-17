@@ -1,0 +1,7 @@
+{% set width = width in ['content', 'wide', 'full'] ? width : 'content' %}
+{% if image %}
+    <figure class="brick brick--image brick--image-{{ width }}">
+        <img class="brick__image" src="{{ image|media }}" alt="{{ alt }}" loading="lazy">
+        {% if caption %}<figcaption class="brick__caption">{{ caption }}</figcaption>{% endif %}
+    </figure>
+{% endif %}

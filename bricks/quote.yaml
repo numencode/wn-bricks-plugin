@@ -1,0 +1,17 @@
+name: numencode.bricks::lang.bricks.quote.name
+description: numencode.bricks::lang.bricks.quote.description
+icon: icon-quote-left
+fields:
+    quote:
+        label: numencode.bricks::lang.fields.quote
+        type: textarea
+        size: small
+        translatable: true
+    author:
+        label: numencode.bricks::lang.fields.author
+        type: text
+    source:
+        label: numencode.bricks::lang.fields.source
+        comment: numencode.bricks::lang.fields.source_comment
+        type: text
+        translatable: true

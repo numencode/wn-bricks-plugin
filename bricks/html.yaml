@@ -1,0 +1,11 @@
+name: numencode.bricks::lang.bricks.html.name
+description: numencode.bricks::lang.bricks.html.description
+icon: icon-code
+permissions: numencode.bricks.use_html
+fields:
+    html:
+        label: numencode.bricks::lang.fields.html
+        comment: numencode.bricks::lang.fields.html_comment
+        type: codeeditor
+        language: html
+        size: large

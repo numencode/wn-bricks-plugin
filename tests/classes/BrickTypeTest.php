@@ -42,6 +42,30 @@ class BrickTypeTest extends BricksTestCase
         $this->assertNotSame('numencode.bricks::lang.bricks.heading.name', $type->label());
     }
 
+    public function testAMarkupOnlyTypeIsValid(): void
+    {
+        $type = BrickType::fromArray('divider', ['name' => 'Divider'], '/path/divider.htm');
+
+        $this->assertSame([], $type->fields);
+        $this->assertSame([], $type->permissions);
+        $this->assertTrue($type->isAllowedFor(null));
+    }
+
+    public function testPermissions(): void
+    {
+        $single = BrickType::fromArray('html', ['name' => 'HTML', 'permissions' => 'acme.use_html'], '/path/html.htm');
+        $list = BrickType::fromArray('html', ['name' => 'HTML', 'permissions' => ['acme.a', 'acme.b']], '/path/html.htm');
+
+        $this->assertSame(['acme.use_html'], $single->permissions);
+        $this->assertSame(['acme.a', 'acme.b'], $list->permissions);
+        $this->assertFalse($single->isAllowedFor(null));
+
+        $user = new \Backend\Models\User();
+        $user->permissions = ['acme.b' => 1];
+        $this->assertFalse($single->isAllowedFor($user));
+        $this->assertTrue($list->isAllowedFor($user), 'any of the permissions is enough');
+    }
+
     public function testAComponentBrickNeedsNoFieldsOrMarkup(): void
     {
         $type = BrickType::fromArray('counters', [
@@ -72,8 +96,10 @@ class BrickTypeTest extends BricksTestCase
             'field without config'    => ['q', ['name' => 'Q', 'fields' => ['text']], 'm.htm', 'each field must be'],
             'reserved field _group'   => ['q', ['name' => 'Q', 'fields' => ['_group' => []]], 'm.htm', '"_group" is reserved'],
             'reserved field brick'    => ['q', ['name' => 'Q', 'fields' => ['brick' => []]], 'm.htm', '"brick" is reserved'],
-            'no fields, no component' => ['q', ['name' => 'Q'], 'm.htm', 'either "fields" or "component"'],
             'no markup'               => ['q', ['name' => 'Q', 'fields' => $fields], null, 'no markup found'],
+            'no fields, no markup'    => ['q', ['name' => 'Q'], null, 'no markup found'],
+            'permissions not strings' => ['q', ['name' => 'Q', 'permissions' => [['x']]], 'm.htm', '"permissions" must be'],
+            'permissions a number'    => ['q', ['name' => 'Q', 'permissions' => 5], 'm.htm', '"permissions" must be'],
         ];
     }
 

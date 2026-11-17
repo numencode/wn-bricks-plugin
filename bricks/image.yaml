@@ -1,0 +1,25 @@
+name: numencode.bricks::lang.bricks.image.name
+description: numencode.bricks::lang.bricks.image.description
+icon: icon-picture-o
+fields:
+    image:
+        label: numencode.bricks::lang.fields.image
+        type: mediafinder
+        mode: image
+    alt:
+        label: numencode.bricks::lang.fields.alt
+        comment: numencode.bricks::lang.fields.alt_comment
+        type: text
+        translatable: true
+    caption:
+        label: numencode.bricks::lang.fields.caption
+        type: text
+        translatable: true
+    width:
+        label: numencode.bricks::lang.fields.width
+        type: dropdown
+        default: content
+        options:
+            content: numencode.bricks::lang.options.width.content
+            wide: numencode.bricks::lang.options.width.wide
+            full: numencode.bricks::lang.options.width.full

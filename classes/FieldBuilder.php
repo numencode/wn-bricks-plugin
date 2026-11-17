@@ -23,18 +23,25 @@ class FieldBuilder
      * repeater translates them.
      *
      * @param array<string, BrickType> $types
+     * @param array<int, string> $readOnly Codes of the types whose fields are read-only
      * @return array<string, array<string, mixed>>
      */
-    public static function groups(array $types): array
+    public static function groups(array $types, array $readOnly = []): array
     {
         $groups = [];
 
         foreach ($types as $code => $type) {
+            $fields = $type->isComponent() ? ComponentBricks::fields($type) : $type->fields;
+
+            if (in_array($code, $readOnly, true)) {
+                $fields = array_map(fn (array $field) => ['readOnly' => true] + $field, $fields);
+            }
+
             $groups[$code] = [
                 'name'        => $type->name,
                 'description' => $type->description,
                 'icon'        => $type->icon,
-                'fields'      => $type->isComponent() ? ComponentBricks::fields($type) : $type->fields,
+                'fields'      => $fields,
             ];
         }
 
@@ -45,19 +52,36 @@ class FieldBuilder
      * The repeater field replacing a bricks field. Options given in the definition win over the defaults
      * (prompt, style, label), except the type and the groups.
      *
+     * The repeater gets a group for every type in $all, not only the offered ones: a brick whose type has no group
+     * would be saved without its values. The types that are not offered are hidden in the "Add brick" list (the
+     * container attribute data-bricks-hidden, read by assets/js/bricks.js).
+     *
      * @param array<string, mixed> $config The bricks field definition
-     * @param array<string, BrickType> $types The brick types offered in this field
+     * @param array<string, BrickType> $offered The brick types offered in the "Add brick" list (in this order)
+     * @param array<string, BrickType>|null $all All brick types (default: the offered ones)
+     * @param array<int, string> $readOnly Codes of the types the user may not edit
      * @return array<string, mixed>
      */
-    public static function field(array $config, array $types): array
+    public static function field(array $config, array $offered, ?array $all = null, array $readOnly = []): array
     {
         $field = array_diff_key($config, array_flip(self::OWN_OPTIONS));
+        $types = $offered + ($all ?? []);
+        $hidden = array_keys(array_diff_key($types, $offered));
 
-        return array_merge(
+        $field = array_merge(
             ['label' => self::DEFAULT_LABEL, 'prompt' => self::DEFAULT_PROMPT, 'style' => 'collapsed'],
             array_filter($field, fn ($value) => $value !== null && $value !== ''),
-            ['type' => 'repeater', 'groups' => self::groups($types)],
+            ['type' => 'repeater', 'groups' => self::groups($types, $readOnly)],
         );
+
+        if ($hidden) {
+            $field['containerAttributes'] = array_merge(
+                (array) ($field['containerAttributes'] ?? []),
+                ['data-bricks-hidden' => implode(',', $hidden)],
+            );
+        }
+
+        return $field;
     }
 
     /**

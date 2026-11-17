@@ -2,3 +2,4 @@ static-pages:
     home: {  }
     about: {  }
     empty: {  }
+    base: {  }

@@ -1,0 +1,30 @@
+name: numencode.bricks::lang.bricks.columns.name
+description: numencode.bricks::lang.bricks.columns.description
+icon: icon-columns
+fields:
+    columns:
+        label: numencode.bricks::lang.fields.columns
+        type: dropdown
+        default: '2'
+        options:
+            '2': '2'
+            '3': '3'
+    column_1:
+        label: numencode.bricks::lang.fields.column_1
+        type: richeditor
+        size: large
+        translatable: true
+    column_2:
+        label: numencode.bricks::lang.fields.column_2
+        type: richeditor
+        size: large
+        translatable: true
+    column_3:
+        label: numencode.bricks::lang.fields.column_3
+        type: richeditor
+        size: large
+        translatable: true
+        trigger:
+            action: show
+            field: columns
+            condition: value[3]

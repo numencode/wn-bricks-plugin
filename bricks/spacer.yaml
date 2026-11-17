@@ -1,0 +1,12 @@
+name: numencode.bricks::lang.bricks.spacer.name
+description: numencode.bricks::lang.bricks.spacer.description
+icon: icon-arrows-v
+fields:
+    size:
+        label: numencode.bricks::lang.fields.size
+        type: dropdown
+        default: medium
+        options:
+            small: numencode.bricks::lang.options.size.small
+            medium: numencode.bricks::lang.options.size.medium
+            large: numencode.bricks::lang.options.size.large

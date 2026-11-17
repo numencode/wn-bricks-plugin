@@ -1,0 +1,13 @@
+name: numencode.bricks::lang.bricks.video.name
+description: numencode.bricks::lang.bricks.video.description
+icon: icon-youtube-play
+fields:
+    url:
+        label: numencode.bricks::lang.fields.video_url
+        comment: numencode.bricks::lang.fields.video_url_comment
+        type: text
+    title:
+        label: numencode.bricks::lang.fields.video_title
+        comment: numencode.bricks::lang.fields.video_title_comment
+        type: text
+        translatable: true
