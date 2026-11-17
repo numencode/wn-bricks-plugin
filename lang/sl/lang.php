@@ -7,6 +7,7 @@ return [
     ],
     'permissions' => [
         'use_html' => 'Dodajanje in urejanje gradnikov HTML',
+        'denied'   => 'Nimate dovoljenja za dodajanje ali spreminjanje gradnikov »:type«.',
     ],
     'bricks' => [
         'heading' => [

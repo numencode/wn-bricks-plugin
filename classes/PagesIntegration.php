@@ -30,6 +30,10 @@ class PagesIntegration
         Event::listen('backend.form.extendFieldsBefore', [static::class, 'extendForm']);
         Event::listen('cms.page.initComponents', [ComponentBricks::class, 'addComponents']);
 
+        if (class_exists(Page::class)) {
+            PermissionGuard::register();
+        }
+
         if (class_exists(\Winter\Pages\Controllers\Index::class)) {
             \Winter\Pages\Controllers\Index::extend(function ($controller) {
                 $controller->addJs('/plugins/numencode/bricks/assets/js/bricks.js', 'NumenCode.Bricks');
