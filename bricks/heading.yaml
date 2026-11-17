@@ -1,0 +1,16 @@
+name: numencode.bricks::lang.bricks.heading.name
+description: numencode.bricks::lang.bricks.heading.description
+icon: icon-header
+fields:
+    text:
+        label: numencode.fundamentals::lang.field.title
+        type: text
+        translatable: true
+    level:
+        label: numencode.bricks::lang.fields.level
+        type: dropdown
+        default: h2
+        options:
+            h2: H2
+            h3: H3
+            h4: H4

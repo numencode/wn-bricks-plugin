@@ -1,0 +1,6 @@
+name: Callout
+description: A highlighted note
+fields:
+    content:
+        label: Content
+        type: textarea

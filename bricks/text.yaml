@@ -1,0 +1,9 @@
+name: numencode.bricks::lang.bricks.text.name
+description: numencode.bricks::lang.bricks.text.description
+icon: icon-paragraph
+fields:
+    content:
+        label: numencode.fundamentals::lang.field.content
+        type: richeditor
+        size: large
+        translatable: true

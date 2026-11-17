@@ -1,0 +1,5 @@
+name: Theme heading
+fields:
+    text:
+        label: Text
+        type: text

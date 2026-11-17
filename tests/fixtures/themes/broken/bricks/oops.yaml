@@ -1,0 +1,5 @@
+name: Oops
+colour: red
+fields:
+    text:
+        type: text

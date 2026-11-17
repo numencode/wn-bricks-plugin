@@ -1,0 +1,4 @@
+{% set tag = level in ['h2', 'h3', 'h4'] ? level : 'h2' %}
+{% if text %}
+    <{{ tag }} class="brick brick--heading">{{ text }}</{{ tag }}>
+{% endif %}

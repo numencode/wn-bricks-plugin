@@ -28,6 +28,9 @@ class Plugin extends PluginBase
      */
     public function registerBricks(): array
     {
-        return [];
+        return [
+            'heading' => '$/numencode/bricks/bricks/heading',
+            'text'    => '$/numencode/bricks/bricks/text',
+        ];
     }
 }

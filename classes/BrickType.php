@@ -1,0 +1,152 @@
+<?php
+
+declare(strict_types=1);
+
+namespace NumenCode\Bricks\Classes;
+
+use Lang;
+use Yaml;
+
+/**
+ * One brick type: its code, labels, form fields and markup, read from <code>.yaml (+ <code>.htm).
+ *
+ * The name and description may be lang keys; label() and comment() translate them.
+ */
+final class BrickType
+{
+    /**
+     * Keys allowed in a definition file.
+     */
+    public const KEYS = ['name', 'description', 'icon', 'fields', 'component'];
+
+    /**
+     * Field names a brick type cannot use: "_group" stores the type code, "brick" is a template variable.
+     */
+    public const RESERVED_FIELDS = ['_group', 'brick'];
+
+    public const DEFAULT_ICON = 'icon-cube';
+
+    /**
+     * @param array<string, array<string, mixed>> $fields Backend form field definitions
+     * @param string|null $component Component class of a component brick
+     * @param string|null $markupPath The type's own markup file (a theme partial takes precedence when rendering)
+     * @param string $source Where the definition comes from, for error messages
+     */
+    public function __construct(
+        public readonly string $code,
+        public readonly string $name,
+        public readonly string $description = '',
+        public readonly string $icon = self::DEFAULT_ICON,
+        public readonly array $fields = [],
+        public readonly ?string $component = null,
+        public readonly ?string $markupPath = null,
+        public readonly string $source = '',
+    ) {
+    }
+
+    /**
+     * Reads a definition file.
+     *
+     * @throws InvalidBrickException
+     */
+    public static function fromYaml(string $code, string $yamlPath, ?string $markupPath = null): self
+    {
+        if (!is_file($yamlPath)) {
+            throw InvalidBrickException::make($code, $yamlPath, 'the definition file does not exist');
+        }
+
+        try {
+            $config = Yaml::parseFile($yamlPath);
+        } catch (\Throwable $exception) {
+            throw InvalidBrickException::make($code, $yamlPath, $exception->getMessage());
+        }
+
+        return self::fromArray($code, is_array($config) ? $config : [], $markupPath, $yamlPath);
+    }
+
+    /**
+     * Builds a type from a parsed definition and validates it.
+     *
+     * @param array<string, mixed> $config
+     * @throws InvalidBrickException
+     */
+    public static function fromArray(string $code, array $config, ?string $markupPath = null, string $source = ''): self
+    {
+        $fail = fn (string $problem) => InvalidBrickException::make($code, $source ?: 'inline', $problem);
+
+        if (!preg_match('/^[a-z][a-z0-9_-]*$/', $code)) {
+            throw $fail('the code must start with a lowercase letter and contain only a-z, 0-9, "_" and "-"');
+        }
+
+        if ($unknown = array_diff(array_keys($config), self::KEYS)) {
+            throw $fail('unknown key(s) ' . implode(', ', $unknown) . '; allowed: ' . implode(', ', self::KEYS));
+        }
+
+        if (!is_string($config['name'] ?? null) || trim($config['name']) === '') {
+            throw $fail('"name" is required');
+        }
+
+        foreach (['description', 'icon', 'component'] as $key) {
+            if (isset($config[$key]) && !is_string($config[$key])) {
+                throw $fail("\"{$key}\" must be a string");
+            }
+        }
+
+        $fields = $config['fields'] ?? [];
+        $component = $config['component'] ?? null;
+
+        if (!is_array($fields)) {
+            throw $fail('"fields" must be a list of form fields');
+        }
+
+        foreach ($fields as $name => $field) {
+            if (!is_string($name) || !is_array($field)) {
+                throw $fail('each field must be a name with a field definition');
+            }
+
+            if (in_array($name, self::RESERVED_FIELDS, true)) {
+                throw $fail("the field name \"{$name}\" is reserved");
+            }
+        }
+
+        if (!$fields && $component === null) {
+            throw $fail('either "fields" or "component" is required');
+        }
+
+        if ($component === null && $markupPath === null) {
+            throw $fail('no markup found (a <code>.htm next to the definition or a theme partial bricks/<code>.htm)');
+        }
+
+        return new self(
+            code: $code,
+            name: $config['name'],
+            description: $config['description'] ?? '',
+            icon: $config['icon'] ?? self::DEFAULT_ICON,
+            fields: $fields,
+            component: $component,
+            markupPath: $markupPath,
+            source: $source,
+        );
+    }
+
+    public function isComponent(): bool
+    {
+        return $this->component !== null;
+    }
+
+    /**
+     * The translated name.
+     */
+    public function label(): string
+    {
+        return Lang::get($this->name);
+    }
+
+    /**
+     * The translated description.
+     */
+    public function comment(): string
+    {
+        return $this->description === '' ? '' : Lang::get($this->description);
+    }
+}
