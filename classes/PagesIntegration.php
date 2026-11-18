@@ -40,6 +40,7 @@ class PagesIntegration
 
         if (class_exists(Page::class)) {
             PermissionGuard::register();
+            EmptyOptions::register();
         }
 
         if (class_exists(\Winter\Pages\Controllers\Index::class)) {
