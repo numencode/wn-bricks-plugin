@@ -74,6 +74,11 @@ return [
         'prompt' => 'Add brick',
     ],
     'fields' => [
+        'advanced'            => 'Advanced',
+        'anchor'              => 'Anchor',
+        'anchor_comment'      => 'For links to this brick, e.g. "contact" for #contact.',
+        'css_class'           => 'CSS class',
+        'css_class_comment'   => 'Extra classes for styling the brick, separated by spaces.',
         'level'               => 'Level',
         'image'               => 'Image',
         'images'              => 'Images',

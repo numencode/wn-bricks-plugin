@@ -8,6 +8,7 @@ use Cms\Classes\Controller;
 use Cms\Classes\Partial;
 use Config;
 use Log;
+use Str;
 use Winter\Pages\Classes\Page;
 
 /**
@@ -91,6 +92,28 @@ class BrickRenderer
      * @param array<string, mixed> $brick
      */
     /**
+     * A brick's anchor as an HTML id: a slug (e.g. "Our team" → "our-team"), '' when empty.
+     */
+    public static function anchor(mixed $value): string
+    {
+        return is_string($value) ? Str::slug($value) : '';
+    }
+
+    /**
+     * A brick's CSS classes: only letters, digits, "-" and "_" per class, separated by single spaces.
+     */
+    public static function cssClass(mixed $value): string
+    {
+        if (!is_string($value)) {
+            return '';
+        }
+
+        $classes = array_map(fn (string $class) => preg_replace('/[^A-Za-z0-9_-]/', '', $class), preg_split('/\s+/', $value) ?: []);
+
+        return implode(' ', array_unique(array_filter($classes, 'strlen')));
+    }
+
+    /**
      * Whether a brick is hidden on the website ("_hidden", set with the eye button in the editor).
      *
      * @param array<string, mixed> $brick
@@ -116,12 +139,23 @@ class BrickRenderer
             return '';
         }
 
+        $anchor = static::anchor($brick[FieldBuilder::ANCHOR_FIELD] ?? '');
+        $class = static::cssClass($brick[FieldBuilder::CLASS_FIELD] ?? '');
+
         if ($type->isComponent()) {
-            return $this->renderComponent(ComponentBricks::alias($field, $index));
+            $html = $this->renderComponent(ComponentBricks::alias($field, $index));
+
+            // The component's markup can't use them, so a wrapper carries the anchor and CSS class (only when set)
+            return ($anchor === '' && $class === '') || trim($html) === '' ? $html : sprintf(
+                '<div%s%s>%s</div>',
+                $anchor === '' ? '' : ' id="' . e($anchor) . '"',
+                $class === '' ? '' : ' class="' . e($class) . '"',
+                $html,
+            );
         }
 
         $vars = array_diff_key($brick, array_flip(BrickType::RESERVED_FIELDS));
-        $vars['brick'] = ['code' => $code, 'index' => $index, 'field' => $field];
+        $vars['brick'] = ['code' => $code, 'index' => $index, 'field' => $field, 'anchor' => $anchor, 'class' => $class];
 
         // Check the theme partial first: renderPartial() keeps the merged variables when it returns false for a
         // missing partial, so the next brick (and the page) would see this brick's values

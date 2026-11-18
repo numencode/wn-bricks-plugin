@@ -165,7 +165,8 @@
     }
 
     function itemSummary($item, titleFrom) {
-        var $fields = ownFields($item),
+        // Without the anchor and CSS class ("Advanced")
+        var $fields = ownFields($item).not('.bricks-advanced'),
             text = '';
 
         if (titleFrom) {
@@ -281,6 +282,7 @@
                 addItemActions($item);
                 updateEditLink($item);
                 updateHidden($item);
+                initAdvanced($item);
             });
         });
     }
@@ -340,6 +342,35 @@
                 $copy.find(':input').first().trigger('change');
             }
         });
+    });
+
+    //
+    // "Advanced": the anchor and CSS class fields, shown with a toggle (open when one of them has a value)
+    //
+
+    function setAdvanced($item, open) {
+        ownFields($item).filter('.bricks-advanced').toggleClass('bricks-advanced--open', open);
+        ownFields($item).find('[data-bricks-advanced-toggle] > i').first()
+            .attr('class', open ? 'icon-angle-down' : 'icon-angle-right');
+        $item.data('bricks-advanced', open);
+    }
+
+    function initAdvanced($item) {
+        if ($item.data('bricks-advanced') !== undefined) {
+            return;
+        }
+
+        setAdvanced($item, ownFields($item).filter('.bricks-advanced').find('input').filter(function () {
+            return $.trim(this.value) !== '';
+        }).length > 0);
+    }
+
+    $(document).on('click', '[data-bricks] [data-bricks-advanced-toggle]', function (ev) {
+        ev.preventDefault();
+
+        var $item = $(this).closest('.bricks-item');
+
+        setAdvanced($item, !$item.data('bricks-advanced'));
     });
 
     //

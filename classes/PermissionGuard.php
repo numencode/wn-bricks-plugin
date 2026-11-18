@@ -145,8 +145,8 @@ class PermissionGuard
      */
     public static function fingerprint(array $brick): string
     {
-        // Showing or hiding a brick isn't a change of its content (like moving it)
-        unset($brick[FieldBuilder::HIDDEN_FIELD]);
+        // Showing or hiding a brick, its anchor and CSS class aren't changes of its content (like moving it)
+        unset($brick[FieldBuilder::HIDDEN_FIELD], $brick[FieldBuilder::ANCHOR_FIELD], $brick[FieldBuilder::CLASS_FIELD]);
 
         return json_encode(static::normalize($brick), JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
     }

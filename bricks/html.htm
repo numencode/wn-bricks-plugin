@@ -1,3 +1,3 @@
 {% if html %}
-    <div class="brick brick--html">{{ html|raw }}</div>
+    <div class="brick brick--html{% if brick.class %} {{ brick.class }}{% endif %}"{% if brick.anchor %} id="{{ brick.anchor }}"{% endif %}>{{ html|raw }}</div>
 {% endif %}

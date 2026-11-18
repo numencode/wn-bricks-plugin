@@ -22,7 +22,7 @@ class FieldBuilderTest extends BricksTestCase
         $this->assertSame('icon-paragraph', $groups['text']['icon']);
         $this->assertSame('richeditor', $groups['text']['fields']['content']['type']);
         $this->assertSame('icon-quote-left', $groups['quote']['icon']);
-        $this->assertSame(['quote', 'author', FieldBuilder::HIDDEN_FIELD], array_keys($groups['quote']['fields']));
+        $this->assertSame(['quote', 'author', '_advanced', FieldBuilder::ANCHOR_FIELD, FieldBuilder::CLASS_FIELD, FieldBuilder::HIDDEN_FIELD], array_keys($groups['quote']['fields']));
         $this->assertSame('partial', $groups['quote']['fields'][FieldBuilder::HIDDEN_FIELD]['type'], 'every group can be hidden');
     }
 

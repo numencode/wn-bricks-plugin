@@ -74,6 +74,11 @@ return [
         'prompt' => 'Dodaj gradnik',
     ],
     'fields' => [
+        'advanced'            => 'Napredno',
+        'anchor'              => 'Sidro',
+        'anchor_comment'      => 'Za povezave na ta gradnik, npr. "kontakt" za #kontakt.',
+        'css_class'           => 'Razred CSS',
+        'css_class_comment'   => 'Dodatni razredi za oblikovanje gradnika, ločeni s presledki.',
         'level'               => 'Raven',
         'image'               => 'Slika',
         'images'              => 'Slike',

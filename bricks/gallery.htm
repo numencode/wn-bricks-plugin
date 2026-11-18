@@ -1,7 +1,7 @@
 {% set columns = columns in ['2', '3', '4', 2, 3, 4] ? columns : 3 %}
 {% set items = images is iterable ? images|filter(item => item.image is defined and item.image) : [] %}
 {% if items|length %}
-    <div class="brick brick--gallery brick--gallery-{{ columns }}">
+    <div class="brick brick--gallery brick--gallery-{{ columns }}{% if brick.class %} {{ brick.class }}{% endif %}"{% if brick.anchor %} id="{{ brick.anchor }}"{% endif %}>
         {% for item in items %}
             <figure class="brick__item">
                 <a class="brick__link" href="{{ item.image|media }}" data-gallery="{{ brick.field }}-{{ brick.index }}">

@@ -129,6 +129,17 @@ class PermissionGuardTest extends BricksTestCase
         $this->assertAllowed($page);
     }
 
+    public function testTheAnchorAndCssClassOfHtmlBricksCanBeChanged(): void
+    {
+        $page = $this->page();
+        $bricks = $this->bricks($page);
+        $bricks[1]['_anchor'] = 'intro';
+        $bricks[1]['_class'] = 'wide';
+        $this->setBricks($page, $bricks);
+
+        $this->assertAllowed($page);
+    }
+
     public function testAddingAnHtmlBrickIsRejected(): void
     {
         $page = $this->page();

@@ -1,2 +1,2 @@
 {% set size = size in ['small', 'medium', 'large'] ? size : 'medium' %}
-<div class="brick brick--spacer brick--spacer-{{ size }}" aria-hidden="true"></div>
+<div class="brick brick--spacer brick--spacer-{{ size }}{% if brick.class %} {{ brick.class }}{% endif %}"{% if brick.anchor %} id="{{ brick.anchor }}"{% endif %} aria-hidden="true"></div>

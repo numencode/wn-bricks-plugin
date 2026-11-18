@@ -187,3 +187,19 @@ div.form-group.bricks-preview[data-field-name="_preview"] div[data-control="page
     margin: 0;
     color: var(--wn-text-secondary, #777);
 }
+
+/* "Advanced" part of a brick form: the anchor and CSS class, shown with the toggle */
+.form-group.bricks-advanced:not(.bricks-advanced--open) {
+    display: none;
+}
+.bricks-advanced-toggle {
+    display: inline-block;
+    font-size: 12px;
+    color: var(--wn-text-secondary, #777);
+    text-decoration: none;
+}
+.bricks-advanced-toggle:hover,
+.bricks-advanced-toggle:focus {
+    color: var(--wn-text, #333);
+    text-decoration: none;
+}

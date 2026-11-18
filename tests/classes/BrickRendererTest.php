@@ -6,6 +6,7 @@ namespace NumenCode\Bricks\Tests\Classes;
 
 use Cms\Classes\Controller;
 use Cms\Classes\Theme;
+use NumenCode\Bricks\Classes\BrickRenderer;
 use NumenCode\Bricks\Tests\BricksTestCase;
 use NumenCode\Bricks\Tests\Fixtures\Components\Greeting;
 use Winter\Pages\Classes\Page;
@@ -88,6 +89,25 @@ class BrickRendererTest extends BricksTestCase
         $this->assertStringContainsString('<p>Visible text</p>', $main);
         $this->assertStringNotContainsString('Hidden', $main);
         $this->assertSame([], Greeting::$runs, 'the hidden component brick is not added to the page');
+    }
+
+    public function testAnchorsAndCssClassesAreCleanedAndRendered(): void
+    {
+        $main = $this->section($this->render('/advanced'), 'main');
+
+        $this->assertStringContainsString('<div class="brick brick--text wide dark onclickx" id="our-team"><p>With anchor</p></div>', $main);
+        $this->assertStringContainsString('<div class="brick brick--text"><p>Plain</p></div>', $main);
+        // A component brick's own markup gets a wrapper (only when an anchor or class is set)
+        $this->assertStringContainsString('<div id="hello"><p class="greeting">Hello Wrapped (brick_bricks_2)</p>', $main);
+    }
+
+    public function testAnchorAndCssClassValues(): void
+    {
+        $this->assertSame('o-nas-cez-zid', BrickRenderer::anchor(' O nas: čez zid '));
+        $this->assertSame('', BrickRenderer::anchor(['x']));
+        $this->assertSame('a b-c d_e', BrickRenderer::cssClass(" a\tb-c  d_e a "));
+        $this->assertSame('x', BrickRenderer::cssClass('"><x'));
+        $this->assertSame('', BrickRenderer::cssClass(null));
     }
 
     public function testAPageWithoutBricksRendersNothing(): void

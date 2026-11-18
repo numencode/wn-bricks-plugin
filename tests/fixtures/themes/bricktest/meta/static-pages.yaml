@@ -5,3 +5,4 @@ static-pages:
     base: {  }
     guarded: {  }
     hidden: {  }
+    advanced: {  }

@@ -1,6 +1,6 @@
 {% set style = style in ['primary', 'secondary', 'link'] ? style : 'primary' %}
 {% if text and url %}
-    <p class="brick brick--button">
+    <p class="brick brick--button{% if brick.class %} {{ brick.class }}{% endif %}"{% if brick.anchor %} id="{{ brick.anchor }}"{% endif %}>
         <a class="brick__button brick__button--{{ style }}" href="{{ url }}"{% if new_window %} target="_blank" rel="noopener"{% endif %}>{{ text }}</a>
     </p>
 {% endif %}
