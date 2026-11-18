@@ -111,6 +111,22 @@ class PagesIntegrationTest extends BricksTestCase
 
         $this->assertSame('repeater', $fields['viewBag[bricks]']['type']);
         $this->assertSame($before, $page->translatable);
+        $this->assertArrayNotHasKey('locales', json_decode($fields['viewBag[bricks]']['containerAttributes']['data-bricks'], true));
+    }
+
+    public function testTranslatableFieldsGetTheLanguagesForTheFallbackHint(): void
+    {
+        if (!class_exists(\Winter\Translate\Classes\Translator::class)) {
+            $this->markTestSkipped('Winter.Translate is not installed.');
+        }
+
+        $fields = PagesIntegration::replaceFields(['viewBag[bricks]' => ['type' => 'bricks']], new Page(), null, true);
+        $locales = json_decode($fields['viewBag[bricks]']['containerAttributes']['data-bricks'], true)['locales'];
+
+        $this->assertSame(\Winter\Translate\Classes\Translator::instance()->getDefaultLocale(), $locales['default']);
+        $this->assertArrayHasKey($locales['default'], $locales['names']);
+        $this->assertStringContainsString(':locale', $locales['notice']);
+        $this->assertStringContainsString(':default', $locales['copy']);
     }
 
     public function testTranslateTurnsTheFieldIntoAMultilingualRepeater(): void

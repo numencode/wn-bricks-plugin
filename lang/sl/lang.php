@@ -14,6 +14,10 @@ return [
         'duplicate_failed' => 'Gradnika ni bilo mogoče podvojiti. Osvežite stran in poskusite znova.',
         'duplicate_max'    => 'Več gradnikov ni mogoče dodati.',
     ],
+    'fallback'    => [
+        'notice' => 'Gradnikov v jeziku :locale še ni, zato spletna stran na tej strani prikazuje gradnike v jeziku :default.',
+        'copy'   => 'Kopiraj gradnike (:default)',
+    ],
     'unknown'     => [
         'name'        => 'Neznan gradnik (:code)',
         'description' => 'Vrsta tega gradnika ne obstaja več.',

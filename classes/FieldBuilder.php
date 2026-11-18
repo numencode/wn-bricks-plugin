@@ -115,9 +115,10 @@ class FieldBuilder
      * @param array<string, BrickType> $offered The brick types offered in the "Add brick" list (in this order)
      * @param array<string, BrickType>|null $all All brick types (default: the offered ones)
      * @param array<int, string> $readOnly Codes of the types the user may not edit
+     * @param array<string, mixed> $client More settings for assets/js/bricks.js (see clientConfig())
      * @return array<string, mixed>
      */
-    public static function field(array $config, array $offered, ?array $all = null, array $readOnly = []): array
+    public static function field(array $config, array $offered, ?array $all = null, array $readOnly = [], array $client = []): array
     {
         $field = array_diff_key($config, array_flip(self::OWN_OPTIONS));
         $types = static::sortBySection($offered + ($all ?? []));
@@ -129,7 +130,7 @@ class FieldBuilder
             ['type' => 'repeater', 'groups' => self::groups($types, $readOnly)],
         );
 
-        $attributes = ['data-bricks' => static::clientConfig($types)];
+        $attributes = ['data-bricks' => static::clientConfig($types, $client)];
 
         if ($hidden) {
             $attributes['data-bricks-hidden'] = implode(',', $hidden);
@@ -144,11 +145,12 @@ class FieldBuilder
      * The settings assets/js/bricks.js reads from the field's container (data-bricks, JSON): the titleFrom field of
      * each type that has one, the edit links (URL pattern and label), the plugin sections of the "Add brick" list
      * (label + codes; the general types have no heading), the labels of the "Expand all" / "Collapse all" buttons and
-     * of the brick actions (lang "actions").
+     * of the brick actions (lang "actions"), plus $client (e.g. "locales", see PagesIntegration::localeConfig()).
      *
      * @param array<string, BrickType> $types
+     * @param array<string, mixed> $client
      */
-    public static function clientConfig(array $types): string
+    public static function clientConfig(array $types, array $client = []): string
     {
         $titleFrom = [];
         $edit = [];
@@ -174,7 +176,7 @@ class FieldBuilder
             }
         }
 
-        return json_encode([
+        return json_encode($client + [
             'titleFrom'   => (object) $titleFrom,
             'edit'        => (object) $edit,
             'sections'    => $sections,

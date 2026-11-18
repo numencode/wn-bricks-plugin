@@ -148,6 +148,27 @@ class PagesIntegration
     }
 
     /**
+     * The languages for assets/js/bricks.js (Winter.Translate): the default locale, the enabled locales' names and the
+     * texts of the hint shown above an empty list in another language (":locale" / ":default" are filled in by the
+     * browser). An empty list isn't stored, so the website shows the default language's bricks there.
+     *
+     * @return array<string, mixed>
+     */
+    public static function localeConfig(): array
+    {
+        if (!class_exists(\Winter\Translate\Classes\Translator::class)) {
+            return [];
+        }
+
+        return [
+            'default' => \Winter\Translate\Classes\Translator::instance()->getDefaultLocale(),
+            'names'   => (object) \Winter\Translate\Models\Locale::listEnabled(),
+            'notice'  => \Lang::get('numencode.bricks::lang.fallback.notice'),
+            'copy'    => \Lang::get('numencode.bricks::lang.fallback.copy'),
+        ];
+    }
+
+    /**
      * Replaces the bricks fields of one field list with repeaters and registers them as translatable attributes.
      *
      * Offered in "Add brick": the types allowed by the field's allow/ignore that the backend user has the
@@ -182,7 +203,8 @@ class PagesIntegration
             $offered = array_diff_key($types, array_flip($denied));
             // Stored bricks whose type no longer exists keep their content (hidden in "Add brick", like $all's rest)
             $known = $all + UnknownBricks::types($page, (string) $name, $all);
-            $fields[$name] = FieldBuilder::field($config, $offered, $known, $denied);
+            $client = $translatable ? ['locales' => static::localeConfig()] : [];
+            $fields[$name] = FieldBuilder::field($config, $offered, $known, $denied, $client);
 
             if ($translatable && !in_array($name, $page->translatable, true)) {
                 $page->translatable[] = $name;

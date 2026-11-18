@@ -516,12 +516,67 @@
         }
     });
 
+    //
+    // Winter.Translate: a hint above an empty list in another language (the website shows the default language's
+    // bricks there), with a button for Translate's own "copy from" of the default language
+    //
+
+    function updateFallbackNotices() {
+        $('[data-bricks]').each(function () {
+            var $container = $(this),
+                locales = config($container).locales,
+                $ml = $container.find('[data-control="mlrepeater"]').first(),
+                $notice = $container.children('.bricks-fallback');
+
+            if (!locales || !locales.default || !$ml.length) {
+                return;
+            }
+
+            var active = String($ml.find('[data-repeater-active-locale]').first().val() || ''),
+                count = $ml.find('[data-control="fieldrepeater"]').first().children('.field-repeater-items').children('.field-repeater-item').length,
+                names = locales.names || {},
+                name = function (code) { return names[code] || code; };
+
+            if (!active || active === locales.default || count > 0) {
+                $notice.remove();
+                return;
+            }
+
+            if ($notice.length && $notice.data('locale') === active) {
+                return;
+            }
+
+            $notice.remove();
+            $notice = $('<div class="bricks-fallback">').data('locale', active)
+                .append($('<span>').text(String(locales.notice || '').replace(':locale', name(active)).replace(':default', name(locales.default))))
+                .append(' ')
+                .append($('<button type="button" class="btn btn-default btn-xs" data-bricks-copy-default>')
+                    .text(String(locales.copy || '').replace(':default', name(locales.default))));
+
+            $ml.before($notice);
+        });
+    }
+
+    $(document).on('click', '[data-bricks] [data-bricks-copy-default]', function () {
+        var $container = $(this).closest('[data-bricks]'),
+            locales = config($container).locales || {};
+
+        $container.find('[data-control="mlrepeater"]').first()
+            .find('.ml-locale-copy[data-copy-locale="' + locales.default + '"]').first().trigger('click');
+    });
+
+    // A brick removed (the list may be empty now)
+    $(document).on('change', '[data-bricks]', function () {
+        window.setTimeout(updateFallbackNotices, 0);
+    });
+
     function update() {
         patchRepeater();
         processPalettes();
         refreshTitles();
         addItemHeaders();
         addToggleButtons();
+        updateFallbackNotices();
     }
 
     patchRepeater();

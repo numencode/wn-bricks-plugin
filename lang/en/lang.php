@@ -14,6 +14,10 @@ return [
         'duplicate_failed' => 'The brick could not be duplicated. Reload the page and try again.',
         'duplicate_max'    => 'No more bricks can be added.',
     ],
+    'fallback'    => [
+        'notice' => 'There are no :locale bricks yet, so the website shows the :default bricks on this page.',
+        'copy'   => 'Copy the :default bricks',
+    ],
     'unknown'     => [
         'name'        => 'Unknown brick (:code)',
         'description' => 'The type of this brick no longer exists.',

@@ -203,3 +203,17 @@ div.form-group.bricks-preview[data-field-name="_preview"] div[data-control="page
     color: var(--wn-text, #333);
     text-decoration: none;
 }
+
+/* Winter.Translate: hint above an empty list in another language (the website shows the default language's bricks) */
+.bricks-fallback {
+    clear: both;
+    margin: 0 50px 10px 0; /* room for the language button of the field */
+    padding: 8px 12px;
+    border-radius: 4px;
+    background: var(--wn-border-subtle, #f3f5f7);
+    color: var(--wn-text-secondary, #555);
+    font-size: 12px;
+}
+.bricks-fallback > .btn {
+    margin-left: 6px;
+}
