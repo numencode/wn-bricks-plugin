@@ -32,6 +32,7 @@ The first release.
   - "Expand all" / "Collapse all"
   - the "Add brick" list grouped by plugin (e.g. "NumenCode Widgets"), with the components' icons
   - duplicate a brick
+  - copy and paste bricks between pages and languages (kept in the browser's local storage)
   - hide a brick on the website without deleting it
   - an optional anchor and CSS class on every brick ("Advanced")
   - "Edit …" links where a component brick's content is managed elsewhere

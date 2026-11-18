@@ -44,7 +44,7 @@ li.field-repeater-item.bricks-item:not(.collapsed) > .repeater-item-remove {
 }
 
 /* Brick actions, left of the collapse and remove buttons: the "Edit …" link (a brick whose content is edited
-   elsewhere) and the buttons (duplicate, hide) */
+   elsewhere) and the buttons (copy, duplicate, hide) */
 li.field-repeater-item.bricks-item > .bricks-item-actions {
     position: absolute;
     right: 60px;
@@ -86,11 +86,11 @@ li.field-repeater-item.bricks-item.collapsed > .bricks-item-actions {
 }
 li.field-repeater-item.bricks-item.collapsed > .repeater-item-collapsed-title,
 li.field-repeater-item.bricks-item > .bricks-item-header {
-    padding-right: 160px !important;
+    padding-right: 190px !important;
 }
 li.field-repeater-item.bricks-item--editable.collapsed > .repeater-item-collapsed-title,
 li.field-repeater-item.bricks-item--editable > .bricks-item-header {
-    padding-right: 370px !important;
+    padding-right: 400px !important;
 }
 
 /* A brick hidden on the website (the eye button): dimmed, with a "Hidden" label */
@@ -132,10 +132,10 @@ li.field-repeater-item.bricks-item--hidden > .bricks-item-actions [data-bricks-a
     text-shadow: none;
     transition: background-color .15s, color .15s;
 }
-.bricks-toggle-all > .btn:first-child {
+.bricks-toggle-all > .btn[data-bricks-toggle="expand"] {
     border-radius: 4px 0 0 4px;
 }
-.bricks-toggle-all > .btn:last-child {
+.bricks-toggle-all > .btn[data-bricks-toggle="collapse"] {
     margin-left: -1px;
     border-radius: 0 4px 4px 0;
 }
@@ -216,4 +216,14 @@ div.form-group.bricks-preview[data-field-name="_preview"] div[data-control="page
 }
 .bricks-fallback > .btn {
     margin-left: 6px;
+}
+
+/* "Paste …": a copied brick (the clipboard button), left of Expand all / Collapse all */
+.bricks-toggle-all > .btn.bricks-paste {
+    margin-right: 8px;
+    border-radius: 4px;
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }

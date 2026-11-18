@@ -23,7 +23,7 @@ plugins or themes, and themes can override every brick's markup.
 - **Translations** – with [Winter.Translate](https://github.com/wintercms/wn-translate-plugin), each language has its own
   list of bricks, with "copy from" (and machine translation of the marked fields).
 - **A comfortable editor** – collapsed bricks show their type and a summary of their content; "Expand all" /
-  "Collapse all"; duplicate and hide buttons; an anchor and a CSS class on every brick; the "Add brick" list grouped
+  "Collapse all"; duplicate, hide, and copy and paste between pages and languages; an anchor and a CSS class on every brick; the "Add brick" list grouped
   by plugin; "Edit …" links to where a component brick's content is managed; the page preview as its own tab.
 - **Safe editing** – brick types can require permissions (checked on the server, too), and bricks whose type no
   longer exists keep their content.
@@ -99,8 +99,10 @@ added, but existing ones are shown and saved unchanged.
   under its name (e.g. "NumenCode Widgets"). The list has a search box.
 - **Collapsed bricks** show the type and a summary of their content, e.g. "**Text:** Our story began in…". "Expand all"
   and "Collapse all" open or close every brick.
-- **Actions on each brick:** duplicate (the copy appears right after it), hide on the website (the brick is dimmed and
-  marked "Hidden"; it is kept but not rendered), collapse and delete.
+- **Actions on each brick:** copy, duplicate (the copy appears right after it), hide on the website (the brick is
+  dimmed and marked "Hidden"; it is kept but not rendered), collapse and delete.
+- **Copy and paste:** a copied brick is kept in the browser, and "Paste …" (next to "Expand all") adds it at the
+  end of any bricks field that offers its type – on another page, in another language or in another browser tab.
 - **Advanced:** every brick has an optional anchor (for links like `#contact`) and CSS class.
 - **"Edit …" links:** a component brick whose content is managed elsewhere links there, e.g. a NumenCode.Widgets brick
   opens its group's form in a new tab.

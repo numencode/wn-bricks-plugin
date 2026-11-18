@@ -64,4 +64,32 @@ class BrickDuplicatorTest extends BricksTestCase
         Request::instance()->request->set('_bricks_source', '3');
         $this->assertRefused($this->repeater(maxItems: 1), trans('numencode.bricks::lang.actions.duplicate_max'));
     }
+
+    public function testPastedValuesMustBeABrick(): void
+    {
+        $this->assertSame(
+            ['_group' => 'text', 'content' => '<p>A</p>', 'images' => [['image' => '/a.jpg']]],
+            BrickDuplicator::pastedValues('{"_group":"text","content":"<p>A</p>","images":[{"image":"/a.jpg"}],"brick":"x"}'),
+        );
+
+        foreach (['', 'not json', '[]', '{"content":"A"}', '{"_group":""}', '{"_group":["text"]}'] as $json) {
+            $this->assertNull(BrickDuplicator::pastedValues($json), $json);
+        }
+        $this->assertNull(BrickDuplicator::pastedValues(['_group' => 'text']));
+    }
+
+    public function testOnlyTypesTheFieldOffersCanBePasted(): void
+    {
+        Request::instance()->setMethod('POST');
+        $repeater = $this->repeater();
+        (new \ReflectionProperty(Repeater::class, 'groupDefinitions'))->setValue($repeater, ['text' => [], 'html' => []]);
+        $field = (new \ReflectionProperty(Repeater::class, 'formField'))->getValue($repeater);
+        $field->config['containerAttributes']['data-bricks-hidden'] = 'html';
+        $unavailable = trans('numencode.bricks::lang.actions.paste_unavailable');
+
+        foreach (['{"_group":"gallery"}', '{"_group":"html","html":"<b>x</b>"}', 'nonsense'] as $paste) {
+            Request::instance()->request->replace(['_bricks_paste' => $paste]);
+            $this->assertRefused($repeater, $unavailable);
+        }
+    }
 }

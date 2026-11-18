@@ -11,12 +11,16 @@ use Winter\Storm\Exception\ApplicationException;
 use Winter\Storm\Html\Helper as HtmlHelper;
 
 /**
- * Duplicates a brick in the editor (the copy button): the AJAX handler onDuplicateBrick on the bricks field's repeater
- * (also Winter.Translate's MLRepeater, a subclass).
+ * Duplicates and pastes bricks in the editor: the AJAX handler onDuplicateBrick on the bricks field's repeater (also
+ * Winter.Translate's MLRepeater, a subclass).
  *
- * Like the repeater's own onAddItem, it renders a new item at the next index, but filled with the posted values of
- * the source brick (_bricks_source = its index), so every field type (rich editor, media, nested repeaters) is copied
- * by the server, exactly as the form would save it. assets/js/bricks.js inserts the copy after the source brick.
+ * Like the repeater's own onAddItem, it renders a new item at the next index, but filled with values:
+ * - duplicate (the copy button): the posted values of the brick at the index _bricks_source;
+ * - paste (copied to the browser's local storage, from any page or language): _bricks_paste, the brick's values as JSON.
+ *
+ * So every field type (rich editor, media, nested repeaters) is filled by the server, exactly as the form would save it.
+ * A pasted brick must be of a type the field offers. assets/js/bricks.js inserts the new item (a duplicate after its
+ * source, a pasted brick at the end).
  */
 class BrickDuplicator
 {
@@ -30,7 +34,25 @@ class BrickDuplicator
     }
 
     /**
-     * @return array<string, string> The copy's item markup ("item") and its index ("index")
+     * The values of a pasted brick (JSON from the browser), or null when they aren't a brick.
+     *
+     * @return array<string, mixed>|null
+     */
+    public static function pastedValues(mixed $json): ?array
+    {
+        $values = is_string($json) ? json_decode($json, true) : null;
+
+        if (!is_array($values) || !is_string($values['_group'] ?? null) || $values['_group'] === '') {
+            return null;
+        }
+
+        unset($values['brick']);
+
+        return $values;
+    }
+
+    /**
+     * @return array<string, string> The new item's markup ("item") and its index ("index")
      * @throws ApplicationException
      */
     public static function duplicate(Repeater $repeater): array
@@ -48,10 +70,23 @@ class BrickDuplicator
 
             $name = $this->formField->getName();
             $items = post($name);
-            $source = post('_bricks_source');
+            $items = is_array($items) ? $items : [];
 
-            if (!is_array($items) || !is_scalar($source) || !is_array($copy = $items[$source] ?? null)) {
-                throw new ApplicationException(Lang::get('numencode.bricks::lang.actions.duplicate_failed'));
+            if (($paste = post('_bricks_paste')) !== null) {
+                $copy = BrickDuplicator::pastedValues($paste);
+                $hidden = explode(',', (string) ($config['containerAttributes']['data-bricks-hidden'] ?? ''));
+
+                // Only types this field offers (not ones hidden by allow/ignore or permissions, or unknown here)
+                if (!$copy || !isset($this->groupDefinitions[$copy['_group']]) || in_array($copy['_group'], $hidden, true)) {
+                    throw new ApplicationException(Lang::get('numencode.bricks::lang.actions.paste_unavailable'));
+                }
+            } else {
+                $source = post('_bricks_source');
+                $copy = is_scalar($source) ? ($items[$source] ?? null) : null;
+
+                if (!is_array($copy)) {
+                    throw new ApplicationException(Lang::get('numencode.bricks::lang.actions.duplicate_failed'));
+                }
             }
 
             if ($this->maxItems && count($items) >= $this->maxItems) {

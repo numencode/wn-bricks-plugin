@@ -299,6 +299,11 @@
         var labels = config(bricksContainer($item.closest('[data-control="fieldrepeater"]'))).labels || {},
             $actions = $('<div class="bricks-item-actions">').insertAfter($item.children('.bricks-item-header'));
 
+        $('<button type="button" class="bricks-item-action" data-bricks-action="copy">')
+            .attr('title', labels.copy || 'Copy')
+            .append('<i class="icon-clipboard"></i>')
+            .appendTo($actions);
+
         $('<button type="button" class="bricks-item-action" data-bricks-action="duplicate">')
             .attr('title', labels.duplicate || 'Duplicate')
             .append('<i class="icon-copy"></i>')
@@ -491,6 +496,11 @@
             var $buttons = $('<div class="bricks-toggle-all">')
                 .toggleClass('bricks-toggle-all--multilingual', $container.find('.field-multilingual').length > 0);
 
+            // Shown while a copied brick is in the clipboard (updatePasteButtons())
+            $('<button type="button" class="btn btn-default btn-xs bricks-paste wn-icon-clipboard" data-bricks-paste>')
+                .hide()
+                .appendTo($buttons);
+
             $.each({expand: settings.expandAll, collapse: settings.collapseAll}, function (action, label) {
                 $('<button type="button" class="btn btn-default btn-xs">')
                     .addClass(action === 'expand' ? 'wn-icon-angle-double-down' : 'wn-icon-angle-double-up')
@@ -501,7 +511,164 @@
 
             $container.prepend($buttons);
         });
+
+        updatePasteButtons();
     }
+
+    //
+    // Copy and paste (the clipboard button, "Paste …"): a brick's values in the browser's local storage, so it can be
+    // pasted into any bricks field, on any page and in any language (also in another browser tab). The server renders
+    // the pasted brick (BrickDuplicator) if the field offers its type.
+    //
+
+    var CLIPBOARD_KEY = 'numencode.bricks.clipboard';
+
+    function readClipboard() {
+        try {
+            var data = JSON.parse(window.localStorage.getItem(CLIPBOARD_KEY) || 'null');
+
+            return data && data.values && typeof data.values._group === 'string' ? data : null;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function writeClipboard(data) {
+        try {
+            window.localStorage.setItem(CLIPBOARD_KEY, JSON.stringify(data));
+
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    // A brick's values as the form would post them: its own inputs (nested ones included), relative to the brick
+    function brickValues($item) {
+        var name = String(hiddenGroupInput($item).attr('name') || ''),
+            prefix = name.slice(0, -'[_group]'.length),
+            values = {};
+
+        if (!name || name.slice(-'[_group]'.length) !== '[_group]') {
+            return null;
+        }
+
+        // Rich editors write their content to their textarea before a request
+        $item.closest('form').trigger('oc.beforeRequest');
+
+        $.each($item.find(':input').serializeArray(), function (i, input) {
+            if (input.name.indexOf(prefix + '[') !== 0) {
+                return;
+            }
+
+            var keys = (input.name.slice(prefix.length).match(/\[[^\]]*\]/g) || []).map(function (key) {
+                    return key.slice(1, -1);
+                }),
+                target = values;
+
+            keys.forEach(function (key, index) {
+                var last = index === keys.length - 1;
+
+                if (key === '') {
+                    // A list (e.g. a checkbox list): name[]
+                    if (!Array.isArray(target)) {
+                        return;
+                    }
+
+                    key = target.length;
+                }
+
+                if (last) {
+                    target[key] = input.value;
+                } else {
+                    if (typeof target[key] !== 'object' || target[key] === null) {
+                        target[key] = keys[index + 1] === '' ? [] : {};
+                    }
+
+                    target = target[key];
+                }
+            });
+        });
+
+        return values;
+    }
+
+    function hiddenGroupInput($item) {
+        return $item.find('input[name$="[_group]"]').filter(function () {
+            return $(this).closest('.field-repeater-item')[0] === $item[0];
+        }).first();
+    }
+
+    function updatePasteButtons() {
+        var clipboard = readClipboard();
+
+        $('[data-bricks] [data-bricks-paste]').each(function () {
+            var labels = config($(this).closest('[data-bricks]')).labels || {};
+
+            $(this).toggle(!!clipboard).text(clipboard
+                ? String(labels.paste || 'Paste :type').replace(':type', clipboard.title || clipboard.values._group)
+                : '');
+        });
+    }
+
+    $(document).on('click', '[data-bricks] .bricks-item-actions [data-bricks-action="copy"]', function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+
+        var $item = $(this).closest('.bricks-item'),
+            labels = config(bricksContainer($item.closest('[data-control="fieldrepeater"]'))).labels || {},
+            values = brickValues($item);
+
+        if (!values || !writeClipboard({values: values, title: String($item.attr('data-collapse-title') || '')})) {
+            return;
+        }
+
+        updatePasteButtons();
+
+        if ($.wn && $.wn.flashMsg) {
+            $.wn.flashMsg({text: labels.copied || 'Copied', class: 'success', interval: 3});
+        }
+    });
+
+    $(document).on('click', '[data-bricks] [data-bricks-paste]', function () {
+        var $container = $(this).closest('[data-bricks]'),
+            clipboard = readClipboard(),
+            template = $container.find('script[data-group-palette-template]').first().html() || '',
+            handler = (template.match(/data-request="([^"]+)::onAddItem"/) || [])[1],
+            $repeater = $container.find('[data-control="fieldrepeater"]').filter(function () {
+                return bricksContainer($(this)).is($container);
+            }).first();
+
+        if (!clipboard || !handler || !$repeater.length) {
+            return;
+        }
+
+        $(this).request(handler + '::onDuplicateBrick', {
+            data: {_bricks_paste: JSON.stringify(clipboard.values)},
+            success: function (data) {
+                var $copy = $(String(data.item || '')).filter('li.field-repeater-item'),
+                    $items = $repeater.children('.field-repeater-items'),
+                    $add = $items.children('.field-repeater-add-item');
+
+                if (!$copy.length) {
+                    return;
+                }
+
+                $add.length ? $copy.insertBefore($add) : $copy.appendTo($items);
+                $copy.trigger('render');
+                $repeater.closest('[data-field-name]').trigger('change.oc.formwidget');
+                $copy.find(':input').first().trigger('change');
+                $copy[0].scrollIntoView({block: 'nearest'});
+            }
+        });
+    });
+
+    // Copied in another browser tab
+    $(window).on('storage', function (ev) {
+        if (ev.originalEvent && ev.originalEvent.key === CLIPBOARD_KEY) {
+            updatePasteButtons();
+        }
+    });
 
     $(document).on('click', '[data-bricks-toggle]', function (ev) {
         ev.preventDefault();
