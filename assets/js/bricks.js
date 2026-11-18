@@ -496,8 +496,15 @@
             var $buttons = $('<div class="bricks-toggle-all">')
                 .toggleClass('bricks-toggle-all--multilingual', $container.find('.field-multilingual').length > 0);
 
-            // Shown while a copied brick is in the clipboard (updatePasteButtons())
+            // Shown while a copied brick is in the clipboard (updatePasteButtons()); the X forgets it
             $('<button type="button" class="btn btn-default btn-xs bricks-paste wn-icon-clipboard" data-bricks-paste>')
+                .text((settings.labels || {}).paste || 'Paste brick')
+                .hide()
+                .appendTo($buttons);
+
+            $('<button type="button" class="btn btn-default btn-xs bricks-paste-clear" data-bricks-paste-clear>')
+                .attr('title', (settings.labels || {}).paste_clear || 'Forget')
+                .html('&times;')
                 .hide()
                 .appendTo($buttons);
 
@@ -605,11 +612,23 @@
         $('[data-bricks] [data-bricks-paste]').each(function () {
             var labels = config($(this).closest('[data-bricks]')).labels || {};
 
-            $(this).toggle(!!clipboard).text(clipboard
-                ? String(labels.paste || 'Paste :type').replace(':type', clipboard.title || clipboard.values._group)
+            $(this).toggle(!!clipboard).attr('title', clipboard
+                ? String(labels.paste_title || ':type').replace(':type', clipboard.title || clipboard.values._group)
                 : '');
         });
+
+        $('[data-bricks] [data-bricks-paste-clear]').toggle(!!clipboard);
     }
+
+    $(document).on('click', '[data-bricks] [data-bricks-paste-clear]', function () {
+        try {
+            window.localStorage.removeItem(CLIPBOARD_KEY);
+        } catch (e) {
+            // Storage not available: nothing was copied either
+        }
+
+        updatePasteButtons();
+    });
 
     $(document).on('click', '[data-bricks] .bricks-item-actions [data-bricks-action="copy"]', function (ev) {
         ev.preventDefault();

@@ -101,8 +101,9 @@ added, but existing ones are shown and saved unchanged.
   and "Collapse all" open or close every brick.
 - **Actions on each brick:** copy, duplicate (the copy appears right after it), hide on the website (the brick is
   dimmed and marked "Hidden"; it is kept but not rendered), collapse and delete.
-- **Copy and paste:** a copied brick is kept in the browser, and "Paste …" (next to "Expand all") adds it at the
-  end of any bricks field that offers its type – on another page, in another language or in another browser tab.
+- **Copy and paste:** a copied brick is kept in the browser, and "Paste brick" (next to "Expand all") adds it at
+  the end of any bricks field that offers its type – on another page, in another language or in another browser tab.
+  The × next to it forgets the copied brick.
 - **Advanced:** every brick has an optional anchor (for links like `#contact`) and CSS class.
 - **"Edit …" links:** a component brick whose content is managed elsewhere links there, e.g. a NumenCode.Widgets brick
   opens its group's form in a new tab.

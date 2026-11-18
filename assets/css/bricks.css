@@ -218,12 +218,13 @@ div.form-group.bricks-preview[data-field-name="_preview"] div[data-control="page
     margin-left: 6px;
 }
 
-/* "Paste …": a copied brick (the clipboard button), left of Expand all / Collapse all */
+/* "Paste brick" + X (forget the copied brick): a joined pair left of Expand all / Collapse all */
 .bricks-toggle-all > .btn.bricks-paste {
-    margin-right: 8px;
-    border-radius: 4px;
-    max-width: 260px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    border-radius: 4px 0 0 4px;
+}
+.bricks-toggle-all > .btn.bricks-paste-clear {
+    margin: 0 8px 0 -1px;
+    padding: 6px 9px;
+    border-radius: 0 4px 4px 0;
+    font-size: 14px;
 }
