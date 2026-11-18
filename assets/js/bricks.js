@@ -914,6 +914,28 @@
         window.setTimeout(function () { showInPreview($form); }, 50);
     });
 
+    // The Preview tab (PagesIntegration::movePreview()) fills the window below its top edge, which moves when the page's
+    // title bar is collapsed or expanded (Winter.Pages fires oc.updateUi), the window is resized or the tab is opened
+    function sizePreviewFrames() {
+        $('.bricks-preview[data-field-name="_preview"] iframe').each(function () {
+            if (this.offsetParent) {
+                var top = this.getBoundingClientRect().top;
+
+                this.style.height = Math.max(400, Math.floor(window.innerHeight - top - 30)) + 'px';
+            }
+        });
+    }
+
+    $(window).on('resize oc.updateUi', function () {
+        sizePreviewFrames();
+        // The title bar collapses with a transition
+        window.setTimeout(sizePreviewFrames, 350);
+    });
+
+    $(document).on('shown.bs.tab', function () {
+        sizePreviewFrames();
+    });
+
     // The preview (re)loaded, e.g. after an edit
     function bindPreviewFrames() {
         $('[data-field-name="_preview"] iframe').each(function () {
@@ -952,6 +974,7 @@
         addToggleButtons();
         updateFallbackNotices();
         bindPreviewFrames();
+        sizePreviewFrames();
     }
 
     patchRepeater();

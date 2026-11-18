@@ -173,7 +173,8 @@ li.field-repeater-item.bricks-item--hidden > .bricks-item-actions [data-bricks-a
 }
 
 /* Winter.Pages' Preview, moved to an upper tab next to the bricks (PagesIntegration::movePreview()): the tab has no
-   height of its own, so the preview fills the window below the tabs. More specific than Pages' "height: 100%". */
+   height of its own, so the preview fills the window below the tabs (assets/js/bricks.js sets the exact height, also
+   when the title bar is collapsed; this is the starting value). More specific than Pages' "height: 100%". */
 div.form-group.bricks-preview[data-field-name="_preview"] div[data-control="page-preview"] iframe {
     height: calc(100vh - 385px);
     min-height: 400px;
