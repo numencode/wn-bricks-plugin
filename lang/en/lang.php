@@ -6,6 +6,11 @@ return [
         'description' => 'Translatable block-based content builder for static pages.',
     ],
     'edit_link'   => 'Edit :type',
+    'unknown'     => [
+        'name'        => 'Unknown brick (:code)',
+        'description' => 'The type of this brick no longer exists.',
+        'notice'      => 'The type of this brick no longer exists (e.g. its definition was removed). Its content is kept unchanged when the page is saved, but it is not shown on the website. You can move or delete it.',
+    ],
     'permissions' => [
         'use_html' => 'Add and edit HTML bricks',
         'denied'   => "You don't have permission to add or change \":type\" bricks.",

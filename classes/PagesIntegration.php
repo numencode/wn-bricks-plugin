@@ -179,7 +179,9 @@ class PagesIntegration
             }
 
             $offered = array_diff_key($types, array_flip($denied));
-            $fields[$name] = FieldBuilder::field($config, $offered, $all, $denied);
+            // Stored bricks whose type no longer exists keep their content (hidden in "Add brick", like $all's rest)
+            $known = $all + UnknownBricks::types($page, (string) $name, $all);
+            $fields[$name] = FieldBuilder::field($config, $offered, $known, $denied);
 
             if ($translatable && !in_array($name, $page->translatable, true)) {
                 $page->translatable[] = $name;

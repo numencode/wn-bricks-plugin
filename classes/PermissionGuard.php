@@ -84,6 +84,18 @@ class PermissionGuard
      *
      * @return array{0: array<int, array<string, mixed>>, 1: array<int, array<string, mixed>>}
      */
+    /**
+     * All viewBags of the page: the current and the stored one, of the default locale and every other enabled locale.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public static function viewBags(Page $page): array
+    {
+        [$saved, $stored] = static::versions($page);
+
+        return array_merge($saved, $stored);
+    }
+
     protected static function versions(Page $page): array
     {
         $saved = [(array) ($page->attributes['viewBag'] ?? [])];

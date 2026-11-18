@@ -6,6 +6,11 @@ return [
         'description' => 'Prevedljiv urejevalnik vsebine statičnih strani iz gradnikov.',
     ],
     'edit_link'   => 'Uredi: :type',
+    'unknown'     => [
+        'name'        => 'Neznan gradnik (:code)',
+        'description' => 'Vrsta tega gradnika ne obstaja več.',
+        'notice'      => 'Vrsta tega gradnika ne obstaja več (npr. njena definicija je bila odstranjena). Ob shranjevanju strani se vsebina ohrani nespremenjena, na spletni strani pa se ne prikaže. Gradnik lahko premaknete ali izbrišete.',
+    ],
     'permissions' => [
         'use_html' => 'Dodajanje in urejanje gradnikov HTML',
         'denied'   => 'Nimate dovoljenja za dodajanje ali spreminjanje gradnikov »:type«.',
