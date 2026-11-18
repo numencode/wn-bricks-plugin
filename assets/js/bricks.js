@@ -526,7 +526,7 @@
             var $container = $(this),
                 locales = config($container).locales,
                 $ml = $container.find('[data-control="mlrepeater"]').first(),
-                $notice = $container.children('.bricks-fallback');
+                $notice = $ml.children('.bricks-fallback');
 
             if (!locales || !locales.default || !$ml.length) {
                 return;
@@ -553,7 +553,8 @@
                 .append($('<button type="button" class="btn btn-default btn-xs" data-bricks-copy-default>')
                     .text(String(locales.copy || '').replace(':default', name(locales.default))));
 
-            $ml.before($notice);
+            // Inside the multilingual field, so its language button (positioned above the field) stays on the label line
+            $ml.prepend($notice);
         });
     }
 
