@@ -119,6 +119,16 @@ class PermissionGuardTest extends BricksTestCase
         $this->assertAllowed($page);
     }
 
+    public function testHtmlBricksCanBeHiddenAndShown(): void
+    {
+        $page = $this->page();
+        $bricks = $this->bricks($page);
+        $bricks[1]['_hidden'] = '1';
+        $this->setBricks($page, $bricks);
+
+        $this->assertAllowed($page);
+    }
+
     public function testAddingAnHtmlBrickIsRejected(): void
     {
         $page = $this->page();

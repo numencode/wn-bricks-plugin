@@ -6,6 +6,11 @@ return [
         'description' => 'Translatable block-based content builder for static pages.',
     ],
     'edit_link'   => 'Edit :type',
+    'actions'     => [
+        'hide'   => 'Hide on the website',
+        'show'   => 'Show on the website',
+        'hidden' => 'Hidden',
+    ],
     'unknown'     => [
         'name'        => 'Unknown brick (:code)',
         'description' => 'The type of this brick no longer exists.',

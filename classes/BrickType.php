@@ -20,9 +20,10 @@ final class BrickType
     public const KEYS = ['name', 'description', 'icon', 'fields', 'component', 'permissions', 'titleFrom', 'editUrl'];
 
     /**
-     * Field names a brick type cannot use: "_group" stores the type code, "brick" is a template variable.
+     * Field names a brick type cannot use: "_group" stores the type code, "_hidden" marks a brick hidden on the website,
+     * "brick" is a template variable.
      */
-    public const RESERVED_FIELDS = ['_group', 'brick'];
+    public const RESERVED_FIELDS = ['_group', '_hidden', 'brick'];
 
     public const DEFAULT_ICON = 'icon-cube';
 

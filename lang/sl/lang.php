@@ -6,6 +6,11 @@ return [
         'description' => 'Prevedljiv urejevalnik vsebine statičnih strani iz gradnikov.',
     ],
     'edit_link'   => 'Uredi: :type',
+    'actions'     => [
+        'hide'   => 'Skrij na spletni strani',
+        'show'   => 'Prikaži na spletni strani',
+        'hidden' => 'Skrito',
+    ],
     'unknown'     => [
         'name'        => 'Neznan gradnik (:code)',
         'description' => 'Vrsta tega gradnika ne obstaja več.',

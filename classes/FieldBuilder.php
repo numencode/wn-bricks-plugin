@@ -21,8 +21,14 @@ class FieldBuilder
     public const DEFAULT_LABEL = 'numencode.bricks::lang.field.label';
 
     /**
+     * The value marking a brick hidden on the website (1, or not stored). Every group gets this field: a hidden input
+     * that assets/js/bricks.js enables (hidden) or disables (shown; disabled inputs aren't posted, so nothing is stored).
+     */
+    public const HIDDEN_FIELD = '_hidden';
+
+    /**
      * Repeater groups: code => [name, description, icon, fields]. Names and descriptions stay lang keys; the
-     * repeater translates them.
+     * repeater translates them. Every group also gets the HIDDEN_FIELD.
      *
      * @param array<string, BrickType> $types
      * @param array<int, string> $readOnly Codes of the types whose fields are read-only
@@ -38,6 +44,12 @@ class FieldBuilder
             if (in_array($code, $readOnly, true)) {
                 $fields = array_map(fn (array $field) => ['readOnly' => true] + $field, $fields);
             }
+
+            $fields[self::HIDDEN_FIELD] = [
+                'type'     => 'partial',
+                'path'     => '$/numencode/bricks/classes/fieldbuilder/_hidden.php',
+                'cssClass' => 'bricks-hidden-flag',
+            ];
 
             $groups[$code] = [
                 'name'        => $type->name,
@@ -92,7 +104,8 @@ class FieldBuilder
     /**
      * The settings assets/js/bricks.js reads from the field's container (data-bricks, JSON): the titleFrom field of
      * each type that has one, the edit links (URL pattern and label), the plugin sections of the "Add brick" list
-     * (label + codes; the general types have no heading) and the labels of the "Expand all" / "Collapse all" buttons.
+     * (label + codes; the general types have no heading), the labels of the "Expand all" / "Collapse all" buttons and
+     * of the brick actions (lang "actions").
      *
      * @param array<string, BrickType> $types
      */
@@ -128,6 +141,7 @@ class FieldBuilder
             'sections'    => $sections,
             'expandAll'   => \Lang::get('numencode.fundamentals::lang.repeater.expand_all'),
             'collapseAll' => \Lang::get('numencode.fundamentals::lang.repeater.collapse_all'),
+            'labels'      => \Lang::get('numencode.bricks::lang.actions'),
         ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
     }
 

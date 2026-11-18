@@ -81,6 +81,15 @@ class BrickRendererTest extends BricksTestCase
         $this->assertStringContainsString('Hello Bricks! (brick_bricks_4)', $loop);
     }
 
+    public function testHiddenBricksAreNotRenderedAndTheirComponentsDontRun(): void
+    {
+        $main = $this->section($this->render('/hidden'), 'main');
+
+        $this->assertStringContainsString('<p>Visible text</p>', $main);
+        $this->assertStringNotContainsString('Hidden', $main);
+        $this->assertSame([], Greeting::$runs, 'the hidden component brick is not added to the page');
+    }
+
     public function testAPageWithoutBricksRendersNothing(): void
     {
         $html = $this->render('/empty');

@@ -278,10 +278,71 @@
                         .insertAfter($item.children('.repeater-item-collapsed-title'));
                 }
 
+                addItemActions($item);
                 updateEditLink($item);
+                updateHidden($item);
             });
         });
     }
+
+    //
+    // Actions of a brick, left of the collapse and remove buttons: the "Edit …" link and the buttons
+    //
+
+    function addItemActions($item) {
+        if ($item.children('.bricks-item-actions').length) {
+            return;
+        }
+
+        var labels = config(bricksContainer($item.closest('[data-control="fieldrepeater"]'))).labels || {},
+            $actions = $('<div class="bricks-item-actions">').insertAfter($item.children('.bricks-item-header'));
+
+        $('<button type="button" class="bricks-item-action" data-bricks-action="hide">')
+            .attr('title', labels.hide || 'Hide')
+            .append('<i class="icon-eye"></i>')
+            .appendTo($actions);
+    }
+
+    //
+    // Hidden bricks (the eye button): stored with _hidden = 1, not shown on the website
+    //
+
+    // The brick's own hidden flag input (FieldBuilder::HIDDEN_FIELD), not one of a nested brick
+    function hiddenFlag($item) {
+        return $item.find('input[data-bricks-hidden-flag]').filter(function () {
+            return $(this).closest('.field-repeater-item')[0] === $item[0];
+        }).first();
+    }
+
+    function updateHidden($item) {
+        var $flag = hiddenFlag($item),
+            hidden = $flag.length > 0 && !$flag.prop('disabled'),
+            labels = config(bricksContainer($item.closest('[data-control="fieldrepeater"]'))).labels || {};
+
+        $item.toggleClass('bricks-item--hidden', hidden);
+        $item.children('.bricks-item-actions').find('[data-bricks-action="hide"]')
+            .attr('title', hidden ? (labels.show || 'Show') : (labels.hide || 'Hide'))
+            .find('i').attr('class', hidden ? 'icon-eye-slash' : 'icon-eye');
+
+        $item.children('.bricks-item-actions').children('.bricks-item-hidden-label').remove();
+
+        if (hidden) {
+            $('<span class="bricks-item-hidden-label">').text(labels.hidden || 'Hidden')
+                .insertBefore($item.children('.bricks-item-actions').children('.bricks-item-action').first());
+        }
+    }
+
+    $(document).on('click', '[data-bricks] .bricks-item-actions [data-bricks-action="hide"]', function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+
+        var $item = $(this).closest('.bricks-item'),
+            $flag = hiddenFlag($item);
+
+        // Enabled = hidden (posted); disabled = shown (not posted, nothing stored). "change" marks the form as changed.
+        $flag.prop('disabled', !$flag.prop('disabled')).trigger('change');
+        updateHidden($item);
+    });
 
     //
     // "Edit …" link: where a component brick's content is edited (e.g. the selected Widgets group), in a new tab
@@ -308,7 +369,7 @@
             code = $item.find('input[name$="[_group]"]').first().val(),
             edit = (config($container).edit || {})[code],
             url = edit ? editUrl(edit.url, $item) : '',
-            $link = $item.children('.bricks-item-edit');
+            $link = $item.children('.bricks-item-actions').children('.bricks-item-edit');
 
         if (!url) {
             $link.remove();
@@ -317,7 +378,7 @@
         }
 
         if (!$link.length) {
-            $link = $('<a class="bricks-item-edit" target="_blank" rel="noopener">').insertAfter($item.children('.bricks-item-header'));
+            $link = $('<a class="bricks-item-edit" target="_blank" rel="noopener">').prependTo($item.children('.bricks-item-actions'));
         }
 
         $link.attr('href', url).text(edit.label + ' ›');

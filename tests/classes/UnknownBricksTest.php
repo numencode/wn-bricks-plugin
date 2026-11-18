@@ -6,6 +6,7 @@ namespace NumenCode\Bricks\Tests\Classes;
 
 use Backend\Widgets\Form;
 use NumenCode\Bricks\Classes\BrickRegistry;
+use NumenCode\Bricks\Classes\FieldBuilder;
 use NumenCode\Bricks\Classes\PagesIntegration;
 use NumenCode\Bricks\Classes\UnknownBricks;
 use NumenCode\Bricks\Tests\BricksTestCase;
@@ -73,7 +74,7 @@ class UnknownBricksTest extends BricksTestCase
 
         $this->assertSame(trans('numencode.bricks::lang.unknown.name', ['code' => 'gone']), $group['name']);
         $this->assertSame(UnknownBricks::ICON, $group['icon']);
-        $this->assertSame([UnknownBricks::NOTICE_FIELD, 'title', 'images'], array_keys($group['fields']));
+        $this->assertSame([UnknownBricks::NOTICE_FIELD, 'title', 'images', FieldBuilder::HIDDEN_FIELD], array_keys($group['fields']));
         $this->assertSame('partial', $group['fields']['images']['type']);
         $this->assertContains('gone', explode(',', $field['containerAttributes']['data-bricks-hidden']));
         $this->assertFalse(BrickRegistry::instance()->has('gone'), 'not a registered type, so never rendered');

@@ -204,7 +204,7 @@ class ComponentBricks
             foreach (BrickRenderer::bricks($staticPage, $field) as $index => $brick) {
                 $type = $registry->get((string) ($brick['_group'] ?? ''), $controller->getTheme());
 
-                if (!$type?->isComponent()) {
+                if (!$type?->isComponent() || BrickRenderer::isHidden($brick)) {
                     continue;
                 }
 

@@ -4,3 +4,4 @@ static-pages:
     empty: {  }
     base: {  }
     guarded: {  }
+    hidden: {  }

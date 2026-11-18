@@ -43,25 +43,75 @@ li.field-repeater-item.bricks-item:not(.collapsed) > .repeater-item-remove {
     top: 7px;
 }
 
-/* "Edit …" link of a brick whose content is edited elsewhere, left of the collapse and remove buttons */
-li.field-repeater-item.bricks-item > .bricks-item-edit {
+/* Brick actions, left of the collapse and remove buttons: the "Edit …" link (a brick whose content is edited
+   elsewhere) and the buttons (hide) */
+li.field-repeater-item.bricks-item > .bricks-item-actions {
     position: absolute;
     right: 60px;
     top: 0;
     z-index: 91;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    height: 34px;
+}
+li.field-repeater-item.bricks-item.collapsed > .bricks-item-actions {
+    height: 42px;
+}
+.bricks-item-actions > .bricks-item-edit {
     max-width: 200px;
+    margin-right: 8px;
     font-size: 12px;
-    line-height: 34px;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
 }
-li.field-repeater-item.bricks-item.collapsed > .bricks-item-edit {
-    line-height: 42px;
+.bricks-item-actions > .bricks-item-action {
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 0;
+    border-radius: 3px;
+    background: transparent;
+    color: var(--wn-text-secondary, #999);
+    font-size: 14px;
+    line-height: 26px;
+}
+.bricks-item-actions > .bricks-item-action:hover {
+    background: var(--wn-border-subtle, #eef0f2);
+    color: var(--wn-text, #333);
+}
+.bricks-item-actions > .bricks-item-action:focus:not(:focus-visible) {
+    outline: none;
+}
+li.field-repeater-item.bricks-item.collapsed > .repeater-item-collapsed-title,
+li.field-repeater-item.bricks-item > .bricks-item-header {
+    padding-right: 130px !important;
 }
 li.field-repeater-item.bricks-item--editable.collapsed > .repeater-item-collapsed-title,
 li.field-repeater-item.bricks-item--editable > .bricks-item-header {
-    padding-right: 270px;
+    padding-right: 340px !important;
+}
+
+/* A brick hidden on the website (the eye button): dimmed, with a "Hidden" label */
+li.field-repeater-item.bricks-item--hidden > .repeater-item-collapsed-title,
+li.field-repeater-item.bricks-item--hidden > .bricks-item-header {
+    opacity: 0.5;
+}
+li.field-repeater-item.bricks-item--hidden > .bricks-item-actions [data-bricks-action="hide"] {
+    color: var(--wn-text, #333);
+}
+.bricks-item-actions > .bricks-item-hidden-label {
+    margin-right: 6px;
+    padding: 1px 7px;
+    border-radius: 9px;
+    background: var(--wn-border-subtle, #eef0f2);
+    color: var(--wn-text-secondary, #777);
+    font-size: 11px;
+    line-height: 16px;
+}
+.bricks-hidden-flag {
+    display: none;
 }
 
 /* Collapsed brick: the type in bold, then the summary */

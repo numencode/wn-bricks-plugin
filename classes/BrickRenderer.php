@@ -90,8 +90,23 @@ class BrickRenderer
     /**
      * @param array<string, mixed> $brick
      */
+    /**
+     * Whether a brick is hidden on the website ("_hidden", set with the eye button in the editor).
+     *
+     * @param array<string, mixed> $brick
+     */
+    public static function isHidden(array $brick): bool
+    {
+        return !empty($brick[FieldBuilder::HIDDEN_FIELD]);
+    }
+
     public function renderBrick(array $brick, int $index = 0, string $field = self::DEFAULT_FIELD): string
     {
+        // Hidden in the editor (the eye button): kept, but not shown
+        if (static::isHidden($brick)) {
+            return '';
+        }
+
         $code = (string) ($brick['_group'] ?? '');
         $type = BrickRegistry::instance()->get($code, $this->controller->getTheme());
 
