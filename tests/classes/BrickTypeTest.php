@@ -185,4 +185,14 @@ class BrickTypeTest extends BricksTestCase
             @unlink($file);
         }
     }
+
+    public function testWithPluginKeepsEverythingElse(): void
+    {
+        $type = new BrickType('callout', 'Callout', 'A note', 'icon-star', ['text' => ['type' => 'text']], null, '/x.htm', 'src', ['p'], 'text', 'a/{text}');
+        $moved = $type->withPlugin('Acme.Shop');
+
+        $this->assertSame('', $type->plugin);
+        $this->assertSame('Acme.Shop', $moved->plugin);
+        $this->assertSame(array_diff_key(get_object_vars($type), ['plugin' => 1]), array_diff_key(get_object_vars($moved), ['plugin' => 1]));
+    }
 }

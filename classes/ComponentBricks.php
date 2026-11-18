@@ -12,6 +12,7 @@ use Cms\Classes\Theme;
 use Config;
 use Log;
 use Str;
+use System\Classes\PluginManager;
 use Winter\Pages\Classes\Page;
 use Winter\Pages\Classes\SnippetManager;
 
@@ -19,6 +20,7 @@ use Winter\Pages\Classes\SnippetManager;
  * Component bricks: a brick that runs a CMS component with the brick's values as its properties.
  *
  * - Brick types come from snippet components (config "snippets") and from definitions with a "component" key.
+ *   A snippet brick's icon is the component's "icon" detail (e.g. 'icon' => 'icon-star' in componentDetails()).
  * - Their form fields are generated from the component's properties; the definition's "fields" override them.
  * - On the frontend the components of the static page's bricks are added in cms.page.initComponents (like Pages
  *   adds snippet components), so their onRun() and AJAX handlers work; renderBrick() renders them.
@@ -73,16 +75,45 @@ class ComponentBricks
 
             $code = self::SNIPPET_PREFIX . Str::kebab((string) $snippet->code);
             $details = $component->componentDetails();
+            $plugin = static::pluginOf($class);
 
             $types[$code] = BrickType::fromArray($code, [
                 'name'        => $details['name'] ?? class_basename($class),
                 'description' => $details['description'] ?? '',
-                'icon'        => self::DEFAULT_ICON,
+                'icon'        => static::icon($details, $plugin),
                 'component'   => $class,
-            ], null, 'snippet ' . $class);
+            ], null, 'snippet ' . $class)->withPlugin($plugin === 'NumenCode.Bricks' ? '' : $plugin);
         }
 
         return $types;
+    }
+
+    /**
+     * The plugin of a component class (Author.Plugin), or '' when no plugin has that namespace.
+     */
+    public static function pluginOf(string $class): string
+    {
+        $manager = PluginManager::instance();
+        $identifier = $manager->getIdentifier($class);
+
+        return $manager->findByIdentifier($identifier) ? $identifier : '';
+    }
+
+    /**
+     * The icon of a snippet brick: the component's "icon" detail (componentDetails()), else its plugin's icon, else
+     * DEFAULT_ICON.
+     *
+     * @param array<string, mixed> $details
+     */
+    public static function icon(array $details, string $plugin): string
+    {
+        $icon = $details['icon'] ?? null;
+
+        if ((!is_string($icon) || $icon === '') && $plugin !== '') {
+            $icon = PluginManager::instance()->findByIdentifier($plugin)?->pluginDetails()['icon'] ?? null;
+        }
+
+        return is_string($icon) && $icon !== '' ? $icon : self::DEFAULT_ICON;
     }
 
     /**

@@ -45,6 +45,7 @@ class BrickRegistryTest extends BricksTestCase
         $this->assertSame('A highlighted note', $callout->comment());
         $this->assertStringEndsWith('fixtures/bricks/callout.htm', str_replace('\\', '/', $callout->markupPath));
         $this->assertTrue($this->registry()->has('callout'));
+        $this->assertSame('Test', $callout->plugin, 'the owner given to registerBricks()');
         $this->assertFalse($this->registry()->has('nope'));
     }
 
@@ -61,6 +62,10 @@ class BrickRegistryTest extends BricksTestCase
         $this->useFixtureTheme('bricktest');
         $types = $this->registry()->all();
 
+        // The base set and the theme's own types are general
+        $this->assertSame('', $types['text']->plugin);
+        $this->assertSame('', $types['quote']->plugin);
+
         // New type with its markup in the theme's partials/bricks/
         $this->assertSame('Quote', $types['quote']->label());
         $this->assertStringEndsWith('themes/bricktest/partials/bricks/quote.htm', str_replace('\\', '/', $types['quote']->markupPath));
@@ -70,6 +75,17 @@ class BrickRegistryTest extends BricksTestCase
         $this->assertSame(['text'], array_keys($types['heading']->fields));
         $this->assertStringEndsWith('plugins/numencode/bricks/bricks/heading.htm', str_replace('\\', '/', $types['heading']->markupPath));
         $this->assertStringEndsWith('themes/bricktest/bricks/heading.yaml', str_replace('\\', '/', $types['heading']->source));
+    }
+
+    public function testAThemeDefinitionStaysInTheSectionOfTheTypeItReplaces(): void
+    {
+        $this->useFixtureTheme('bricktest');
+        $this->registry()->registerCallback(fn (BrickRegistry $registry) => $registry->registerBricks([
+            'heading' => $this->fixturePath('bricks/callout'),
+        ], 'Acme.Shop'));
+
+        $this->assertSame('Theme heading', $this->registry()->get('heading')->label());
+        $this->assertSame('Acme.Shop', $this->registry()->get('heading')->plugin);
     }
 
     public function testThemeDefinitionsWinOverCallbacks(): void

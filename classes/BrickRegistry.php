@@ -21,6 +21,11 @@ use Winter\Storm\Support\Traits\Singleton;
  * Markup: a theme's partials/bricks/<code>.htm is used before the type's own <code>.htm. A theme definition that
  * replaces a plugin type keeps that type's markup as the fallback.
  *
+ * Each type knows the plugin that provides it (BrickType::$plugin, for the sections of the "Add brick" list): a snippet's
+ * component plugin, or the plugin whose registerBricks() (or callback, by its owner) registered it. NumenCode.Bricks'
+ * own types, the theme's new types and callbacks without an owner are general (''). A theme definition that replaces a
+ * type stays in that type's section.
+ *
  * The types are kept per theme for the request; Winter caches the parsed YAML files by their modification time.
  */
 class BrickRegistry
@@ -58,7 +63,7 @@ class BrickRegistry
     /**
      * Registers brick types: code => path of the definition without extension (<path>.yaml + <path>.htm).
      * Path symbols ($/ plugins, ~/ base path) are allowed. Only valid while the registry is being built
-     * (from registerBricks() or a callback).
+     * (from registerBricks() or a callback). $owner is the providing plugin (Author.Plugin; '' = general).
      *
      * @param array<string, string> $definitions
      */
@@ -150,11 +155,12 @@ class BrickRegistry
 
         $types = ComponentBricks::snippetTypes($theme);
 
-        foreach ($this->registrations as $code => [$path]) {
+        foreach ($this->registrations as $code => [$path, $owner]) {
             $base = preg_replace('/\.(yaml|htm)$/', '', File::symbolizePath($path));
             $markup = is_file($base . '.htm') ? $base . '.htm' : null;
 
-            $types[$code] = BrickType::fromYaml($code, $base . '.yaml', $markup);
+            $types[$code] = BrickType::fromYaml($code, $base . '.yaml', $markup)
+                ->withPlugin($owner === 'NumenCode.Bricks' ? '' : $owner);
         }
 
         $this->registrations = [];
@@ -179,7 +185,7 @@ class BrickRegistry
             $partial = $theme->getPath() . '/partials/bricks/' . $code . '.htm';
             $markup = is_file($partial) ? $partial : ($pluginTypes[$code]->markupPath ?? null);
 
-            $types[$code] = BrickType::fromYaml($code, $file, $markup);
+            $types[$code] = BrickType::fromYaml($code, $file, $markup)->withPlugin($pluginTypes[$code]->plugin ?? '');
         }
 
         return $types;

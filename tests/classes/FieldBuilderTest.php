@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NumenCode\Bricks\Tests\Classes;
 
 use NumenCode\Bricks\Classes\BrickRegistry;
+use NumenCode\Bricks\Classes\BrickType;
 use NumenCode\Bricks\Classes\FieldBuilder;
 use NumenCode\Bricks\Tests\BricksTestCase;
 
@@ -87,6 +88,58 @@ class FieldBuilderTest extends BricksTestCase
         $this->assertSame('Page content', $field['label']);
         $this->assertSame('Add a block', $field['prompt']);
         $this->assertSame('accordion', $field['style']);
+    }
+
+    /**
+     * @return array<string, BrickType>
+     */
+    protected function typesOfPlugins(): array
+    {
+        $type = fn (string $code, string $plugin) => new BrickType($code, ucfirst($code), plugin: $plugin);
+
+        return [
+            'translated' => $type('translated', 'Winter.Translate'),
+            'text'       => $type('text', ''),
+            'pages-a'    => $type('pages-a', 'Winter.Pages'),
+            'divider'    => $type('divider', ''),
+            'pages-b'    => $type('pages-b', 'Winter.Pages'),
+        ];
+    }
+
+    public function testSectionsPutTheGeneralTypesFirstThenThePluginsByLabel(): void
+    {
+        $this->assertSame([
+            ''                 => ['text', 'divider'],
+            'Winter.Pages'     => ['pages-a', 'pages-b'],
+            'Winter.Translate' => ['translated'],
+        ], FieldBuilder::sections($this->typesOfPlugins()));
+
+        $this->assertSame(['pages-a'], array_keys(FieldBuilder::sortBySection(['pages-a' => $this->typesOfPlugins()['pages-a']])));
+        $this->assertSame([], FieldBuilder::sections([]));
+    }
+
+    public function testTheRepeaterGroupsAndTheClientConfigFollowTheSections(): void
+    {
+        $types = $this->typesOfPlugins();
+        $field = FieldBuilder::field(['type' => 'bricks'], ['translated' => $types['translated'], 'text' => $types['text']], $types);
+        $config = json_decode($field['containerAttributes']['data-bricks'], true);
+
+        $this->assertSame(['text', 'divider', 'pages-a', 'pages-b', 'translated'], array_keys($field['groups']));
+        $this->assertSame([
+            ['label' => FieldBuilder::sectionLabel('Winter.Pages'), 'codes' => ['pages-a', 'pages-b']],
+            ['label' => FieldBuilder::sectionLabel('Winter.Translate'), 'codes' => ['translated']],
+        ], $config['sections']);
+        $this->assertSame('divider,pages-a,pages-b', $field['containerAttributes']['data-bricks-hidden']);
+    }
+
+    public function testSectionLabelsAreTheAuthorAndThePluginName(): void
+    {
+        $pages = FieldBuilder::sectionLabel('Winter.Pages');
+
+        $this->assertStringStartsWith('Winter ', $pages);
+        $this->assertStringNotContainsString('::', $pages);
+        $this->assertSame('Acme Shop', FieldBuilder::sectionLabel('Acme.Shop'), 'not installed: the identifier');
+        $this->assertSame('NumenCode Bricks', FieldBuilder::sectionLabel('NumenCode.Bricks'));
     }
 
     public function testCodesAcceptStringsAndLists(): void

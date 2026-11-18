@@ -3,6 +3,7 @@
  *
  * - "Add brick" list: hides the types in data-bricks-hidden="code,code" (not allowed in this field, or not permitted
  *   for the user). The repeater keeps their groups so existing bricks keep their values; only new ones can't be added.
+ *   Each plugin's types get a heading (data-bricks "sections"); the general types come first, without one.
  *   The list is a <script data-group-palette-template>, re-rendered on AJAX updates (e.g. a locale switch).
  * - Collapsed bricks show "Type: summary": the value of the type's titleFrom field, or of its first filled field.
  * - "Expand all" / "Collapse all" buttons above the bricks.
@@ -37,23 +38,49 @@
         });
     }
 
-    function hidePaletteItems() {
-        $('[data-bricks-hidden]').each(function () {
+    // The type code of a palette entry (its data-request-data is "_repeater_group: 'code'")
+    function paletteCode(link) {
+        var match = String($(link).attr('data-request-data') || '').match(/_repeater_group:\s*'([^']*)'/);
+
+        return match ? match[1] : null;
+    }
+
+    // Hides the types in data-bricks-hidden and adds a heading before each plugin's section (the groups already come
+    // in section order). The headings are text, never HTML.
+    function processPalettes() {
+        $('[data-bricks]').each(function () {
             var $container = $(this),
-                hidden = hiddenCodes($container);
+                hidden = hiddenCodes($container),
+                sections = config($container).sections || [];
 
             $container.find('script[data-group-palette-template]').each(function () {
-                if (this.getAttribute('data-bricks-processed') || !hidden.length) {
+                if (this.getAttribute('data-bricks-processed') || (!hidden.length && !sections.length)) {
                     return;
                 }
 
-                var $template = $('<div>').html(this.innerHTML);
+                var $template = $('<div>').html(this.innerHTML),
+                    items = {};
 
                 $template.find('[data-repeater-add]').each(function () {
-                    var match = String($(this).attr('data-request-data') || '').match(/_repeater_group:\s*'([^']*)'/);
+                    var code = paletteCode(this),
+                        $item = $(this).closest('.repeater-group-item');
 
-                    if (match && hidden.indexOf(match[1]) !== -1) {
-                        $(this).closest('.repeater-group-item').remove();
+                    if (code !== null && hidden.indexOf(code) !== -1) {
+                        $item.remove();
+                    } else if (code !== null) {
+                        items[code] = $item;
+                    }
+                });
+
+                sections.forEach(function (section) {
+                    var first = null;
+
+                    (section.codes || []).forEach(function (code) {
+                        first = first || items[code] || null;
+                    });
+
+                    if (first) {
+                        first.before($('<div class="bricks-palette-section">').text(section.label));
                     }
                 });
 
@@ -62,6 +89,20 @@
             });
         });
     }
+
+    // The palette's search hides entries; hide the headings of sections without a visible entry too. Core's handler is
+    // bound to the input itself, so this delegated one runs after it.
+    $(document).on('input', '.repeater-group-search', function () {
+        var $grid = $(this).closest('.repeater-group-search-container').parent().find('.repeater-group-grid');
+
+        $grid.children('.bricks-palette-section').each(function () {
+            var visible = $(this).nextUntil('.bricks-palette-section', '.repeater-group-item').filter(function () {
+                return this.style.display !== 'none';
+            }).length > 0;
+
+            $(this).toggle(visible);
+        });
+    });
 
     //
     // Collapsed titles
@@ -346,7 +387,7 @@
 
     function update() {
         patchRepeater();
-        hidePaletteItems();
+        processPalettes();
         refreshTitles();
         addItemHeaders();
         addToggleButtons();

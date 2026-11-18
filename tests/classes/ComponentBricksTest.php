@@ -80,7 +80,24 @@ class ComponentBricksTest extends BricksTestCase
         $this->assertSame(Greeting::class, $type->component);
         $this->assertSame('Greeting', $type->label());
         $this->assertSame('Says hello', $type->comment());
-        $this->assertSame(ComponentBricks::DEFAULT_ICON, $type->icon);
+        // The fixture component is in NumenCode.Bricks' namespace: a general type with the plugin's icon
+        $this->assertSame('', $type->plugin);
+        $this->assertSame('icon-cubes', $type->icon);
+    }
+
+    public function testSnippetIconsComeFromTheComponentThenThePlugin(): void
+    {
+        $this->assertSame('icon-star', ComponentBricks::icon(['icon' => 'icon-star'], 'Winter.Pages'));
+        $this->assertNotSame(ComponentBricks::DEFAULT_ICON, ComponentBricks::icon([], 'Winter.Pages'));
+        $this->assertSame(ComponentBricks::DEFAULT_ICON, ComponentBricks::icon(['icon' => ''], ''));
+        $this->assertSame(ComponentBricks::DEFAULT_ICON, ComponentBricks::icon([], 'Acme.Shop'));
+    }
+
+    public function testThePluginOfAComponentClass(): void
+    {
+        $this->assertSame('NumenCode.Bricks', ComponentBricks::pluginOf(Greeting::class));
+        $this->assertSame('Winter.Pages', ComponentBricks::pluginOf(\Winter\Pages\Components\StaticPage::class));
+        $this->assertSame('', ComponentBricks::pluginOf('Acme\Shop\Components\Cart'));
     }
 
     public function testSnippetsCanBeLimitedOrDisabled(): void

@@ -34,6 +34,8 @@ final class BrickType
      * @param array<int, string> $permissions Backend permissions needed to add or edit the brick (any of them)
      * @param string|null $titleFrom The field whose value is shown on a collapsed brick (default: the first filled field)
      * @param string|null $editUrl Backend URL (pattern) where the brick's content is edited, {field} = a field's value
+     * @param string $plugin The plugin that provides the type (Author.Plugin), '' for the general types (NumenCode.Bricks'
+     *                       base set, the theme's own types and callbacks); the "Add brick" list groups the types by it
      */
     public function __construct(
         public readonly string $code,
@@ -47,6 +49,7 @@ final class BrickType
         public readonly array $permissions = [],
         public readonly ?string $titleFrom = null,
         public readonly ?string $editUrl = null,
+        public readonly string $plugin = '',
     ) {
     }
 
@@ -145,6 +148,14 @@ final class BrickType
             titleFrom: $config['titleFrom'] ?? null,
             editUrl: $config['editUrl'] ?? null,
         );
+    }
+
+    /**
+     * The same type, provided by another plugin ('' = general).
+     */
+    public function withPlugin(string $plugin): self
+    {
+        return new self(...['plugin' => $plugin] + get_object_vars($this));
     }
 
     public function isComponent(): bool

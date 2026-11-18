@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace NumenCode\Bricks\Classes;
 
+use System\Classes\PluginManager;
+
 /**
  * Turns a "bricks" field definition into a core repeater in group mode (one group per brick type).
  */
@@ -56,6 +58,8 @@ class FieldBuilder
      * would be saved without its values. The types that are not offered are hidden in the "Add brick" list (the
      * container attribute data-bricks-hidden, read by assets/js/bricks.js).
      *
+     * The groups are ordered by section (see sections()): the general types first, then each plugin's types.
+     *
      * @param array<string, mixed> $config The bricks field definition
      * @param array<string, BrickType> $offered The brick types offered in the "Add brick" list (in this order)
      * @param array<string, BrickType>|null $all All brick types (default: the offered ones)
@@ -65,7 +69,7 @@ class FieldBuilder
     public static function field(array $config, array $offered, ?array $all = null, array $readOnly = []): array
     {
         $field = array_diff_key($config, array_flip(self::OWN_OPTIONS));
-        $types = $offered + ($all ?? []);
+        $types = static::sortBySection($offered + ($all ?? []));
         $hidden = array_keys(array_diff_key($types, $offered));
 
         $field = array_merge(
@@ -87,8 +91,8 @@ class FieldBuilder
 
     /**
      * The settings assets/js/bricks.js reads from the field's container (data-bricks, JSON): the titleFrom field of
-     * each type that has one, the edit links (URL pattern and label) and the labels of the "Expand all" / "Collapse all"
-     * buttons.
+     * each type that has one, the edit links (URL pattern and label), the plugin sections of the "Add brick" list
+     * (label + codes; the general types have no heading) and the labels of the "Expand all" / "Collapse all" buttons.
      *
      * @param array<string, BrickType> $types
      */
@@ -110,12 +114,81 @@ class FieldBuilder
             }
         }
 
+        $sections = [];
+
+        foreach (static::sections($types) as $plugin => $codes) {
+            if ($plugin !== '') {
+                $sections[] = ['label' => static::sectionLabel((string) $plugin), 'codes' => $codes];
+            }
+        }
+
         return json_encode([
             'titleFrom'   => (object) $titleFrom,
             'edit'        => (object) $edit,
+            'sections'    => $sections,
             'expandAll'   => \Lang::get('numencode.fundamentals::lang.repeater.expand_all'),
             'collapseAll' => \Lang::get('numencode.fundamentals::lang.repeater.collapse_all'),
         ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+    }
+
+    /**
+     * The type codes per section of the "Add brick" list: plugin => codes, the general types ('') first, then the
+     * plugins by their label. The types keep their order within a section.
+     *
+     * @param array<string, BrickType> $types
+     * @return array<string, array<int, string>>
+     */
+    public static function sections(array $types): array
+    {
+        $sections = [];
+
+        foreach ($types as $code => $type) {
+            $sections[$type->plugin][] = (string) $code;
+        }
+
+        $general = $sections[''] ?? null;
+        unset($sections['']);
+
+        uksort($sections, fn (string $a, string $b) => strnatcasecmp(static::sectionLabel($a), static::sectionLabel($b)));
+
+        return $general === null ? $sections : ['' => $general] + $sections;
+    }
+
+    /**
+     * The types ordered by section (see sections()).
+     *
+     * @param array<string, BrickType> $types
+     * @return array<string, BrickType>
+     */
+    public static function sortBySection(array $types): array
+    {
+        $sorted = [];
+
+        foreach (static::sections($types) as $codes) {
+            foreach ($codes as $code) {
+                $sorted[$code] = $types[$code];
+            }
+        }
+
+        return $sorted;
+    }
+
+    /**
+     * The heading of a plugin's section: the plugin's author namespace and name, e.g. "NumenCode Widgets" (just the
+     * name when it already starts with the author); the identifier when no such plugin is installed.
+     */
+    public static function sectionLabel(string $plugin): string
+    {
+        $details = PluginManager::instance()->findByIdentifier($plugin)?->pluginDetails() ?? [];
+        $name = is_string($details['name'] ?? null) ? trim(\Lang::get($details['name'])) : '';
+
+        if ($name === '') {
+            return str_replace('.', ' ', $plugin);
+        }
+
+        $author = strstr($plugin, '.', true) ?: '';
+
+        return $author === '' || stripos($name, $author) === 0 ? $name : $author . ' ' . $name;
     }
 
     /**
