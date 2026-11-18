@@ -229,3 +229,10 @@ div.form-group.bricks-preview[data-field-name="_preview"] div[data-control="page
     border-radius: 0 4px 4px 0;
     font-size: 14px;
 }
+
+/* No focus frame after a mouse click on the "Advanced" toggle and the "Edit …" link (keyboard focus keeps it) */
+.bricks-advanced-toggle:focus:not(:focus-visible),
+.bricks-item-actions > .bricks-item-edit:focus:not(:focus-visible) {
+    outline: none;
+    box-shadow: none;
+}
