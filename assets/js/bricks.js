@@ -299,6 +299,13 @@
         var labels = config(bricksContainer($item.closest('[data-control="fieldrepeater"]'))).labels || {},
             $actions = $('<div class="bricks-item-actions">').insertAfter($item.children('.bricks-item-header'));
 
+        if ($item.closest('form').find('[data-field-name="_preview"]').length) {
+            $('<button type="button" class="bricks-item-action" data-bricks-action="preview">')
+                .attr('title', labels.preview || 'Show in the preview')
+                .append('<i class="icon-crosshairs"></i>')
+                .appendTo($actions);
+        }
+
         $('<button type="button" class="bricks-item-action" data-bricks-action="copy">')
             .attr('title', labels.copy || 'Copy')
             .append('<i class="icon-clipboard"></i>')
@@ -821,14 +828,18 @@
             mark.setAttribute('style', [
                 'position: absolute', 'z-index: 2147483647', 'pointer-events: none', 'box-sizing: border-box',
                 'border: 2px solid #3498db', 'border-radius: 4px', 'background: rgba(52, 152, 219, 0.08)',
-                'transition: opacity 0.6s',
+                'transition: opacity 0.2s',
                 'top: ' + (box.top - 4) + 'px', 'left: ' + (box.left - 4) + 'px',
                 'width: ' + (box.right - box.left + 8) + 'px', 'height: ' + (box.bottom - box.top + 8) + 'px'
             ].join('; '));
             doc.body.appendChild(mark);
 
-            window.setTimeout(function () { mark.style.opacity = '0'; }, 1600);
-            window.setTimeout(function () { mark.parentNode && mark.parentNode.removeChild(mark); }, 2300);
+            // Blink three times, then fade out
+            [250, 500, 750, 1000, 1250, 1500].forEach(function (delay, step) {
+                window.setTimeout(function () { mark.style.opacity = step % 2 === 0 ? '0.15' : '1'; }, delay);
+            });
+            window.setTimeout(function () { mark.style.opacity = '0'; }, 2300);
+            window.setTimeout(function () { mark.parentNode && mark.parentNode.removeChild(mark); }, 3000);
         }
 
         // Scroll, then check again: lazy images above the brick load while scrolling and move it down
@@ -864,6 +875,27 @@
 
         setPreviewTarget($item);
         showInPreview($item.closest('form'));
+    });
+
+    // The preview button: opens the tab with the preview (its link has the same position as the preview's pane); the
+    // tab's shown event then shows the brick. When the preview is already visible, the brick is shown right away.
+    $(document).on('click', '[data-bricks] .bricks-item-actions [data-bricks-action="preview"]', function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+
+        var $item = $(this).closest('.bricks-item'),
+            $form = $item.closest('form'),
+            $frame = $form.find('[data-field-name="_preview"] iframe').first(),
+            $pane = $frame.closest('.tab-pane'),
+            $link = $pane.closest('.control-tabs').find('.nav-tabs').first().children('li').eq($pane.index()).children('a');
+
+        setPreviewTarget($item);
+
+        if ($frame.length && $frame[0].offsetParent) {
+            showInPreview($form);
+        } else if ($link.length) {
+            $link.trigger('click');
+        }
     });
 
     $(document).on('focusin', '[data-bricks] .bricks-item', function (ev) {

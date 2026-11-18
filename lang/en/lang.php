@@ -7,6 +7,7 @@ return [
     ],
     'edit_link'   => 'Edit :type',
     'actions'     => [
+        'preview' => 'Show in the preview',
         'hide'   => 'Hide on the website',
         'show'   => 'Show on the website',
         'hidden' => 'Hidden',

@@ -7,6 +7,7 @@ return [
     ],
     'edit_link'   => 'Uredi: :type',
     'actions'     => [
+        'preview' => 'Prikaži v predogledu',
         'hide'   => 'Skrij na spletni strani',
         'show'   => 'Prikaži na spletni strani',
         'hidden' => 'Skrito',

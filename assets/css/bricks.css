@@ -44,7 +44,7 @@ li.field-repeater-item.bricks-item:not(.collapsed) > .repeater-item-remove {
 }
 
 /* Brick actions, left of the collapse and remove buttons: the "Edit …" link (a brick whose content is edited
-   elsewhere) and the buttons (copy, duplicate, hide) */
+   elsewhere) and the buttons (preview, copy, duplicate, hide) */
 li.field-repeater-item.bricks-item > .bricks-item-actions {
     position: absolute;
     right: 60px;
@@ -86,11 +86,11 @@ li.field-repeater-item.bricks-item.collapsed > .bricks-item-actions {
 }
 li.field-repeater-item.bricks-item.collapsed > .repeater-item-collapsed-title,
 li.field-repeater-item.bricks-item > .bricks-item-header {
-    padding-right: 190px !important;
+    padding-right: 220px !important;
 }
 li.field-repeater-item.bricks-item--editable.collapsed > .repeater-item-collapsed-title,
 li.field-repeater-item.bricks-item--editable > .bricks-item-header {
-    padding-right: 400px !important;
+    padding-right: 430px !important;
 }
 
 /* A brick hidden on the website (the eye button): dimmed, with a "Hidden" label */

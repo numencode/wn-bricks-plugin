@@ -107,8 +107,9 @@ added, but existing ones are shown and saved unchanged.
 - **Advanced:** every brick has an optional anchor (for links like `#contact`) and CSS class.
 - **"Edit …" links:** a component brick whose content is managed elsewhere links there, e.g. a NumenCode.Widgets brick
   opens its group's form in a new tab.
-- **Preview link:** clicking a brick's bar scrolls Winter.Pages' preview to it and outlines it there (right away when
-  the preview is visible, otherwise when you open it). Edits and reordering refresh the preview.
+- **Preview link:** the crosshairs button of a brick opens Winter.Pages' preview and scrolls to the brick, which blinks
+  there. Clicking a brick's bar also makes it the one shown when the preview is opened. Edits and reordering refresh
+  the preview.
 - **Preview tab:** with the bricks in the main tabs (NumenCode.Fundamentals' `pages_viewbag_primary_tabs`, on by default),
   Winter.Pages' preview becomes a full-height tab, and the tabs are ordered Content, Preview, Meta, Settings.
 - **Unknown bricks:** a brick whose type no longer exists (e.g. a theme definition was removed) is shown as "Unknown
