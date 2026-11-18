@@ -297,11 +297,50 @@
         var labels = config(bricksContainer($item.closest('[data-control="fieldrepeater"]'))).labels || {},
             $actions = $('<div class="bricks-item-actions">').insertAfter($item.children('.bricks-item-header'));
 
+        $('<button type="button" class="bricks-item-action" data-bricks-action="duplicate">')
+            .attr('title', labels.duplicate || 'Duplicate')
+            .append('<i class="icon-copy"></i>')
+            .appendTo($actions);
+
         $('<button type="button" class="bricks-item-action" data-bricks-action="hide">')
             .attr('title', labels.hide || 'Hide')
             .append('<i class="icon-eye"></i>')
             .appendTo($actions);
     }
+
+    //
+    // Duplicate (the copy button): the server renders a copy of the brick's posted values (BrickDuplicator), which is
+    // inserted right after the brick
+    //
+
+    $(document).on('click', '[data-bricks] .bricks-item-actions [data-bricks-action="duplicate"]', function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+
+        var $item = $(this).closest('.bricks-item'),
+            $remove = $item.children('.repeater-item-remove').find('[data-repeater-remove]'),
+            handler = String($remove.attr('data-request') || '').replace(/::onRemoveItem$/, '::onDuplicateBrick'),
+            index = String($remove.attr('data-request-data') || '').match(/_repeater_index':\s*'([^']*)'/);
+
+        if (!index || handler.indexOf('::onDuplicateBrick') === -1) {
+            return;
+        }
+
+        $item.request(handler, {
+            data: {_bricks_source: index[1]},
+            success: function (data) {
+                var $copy = $(String(data.item || '')).filter('li.field-repeater-item');
+
+                if (!$copy.length) {
+                    return;
+                }
+
+                $copy.insertAfter($item).trigger('render');
+                $item.closest('[data-field-name]').trigger('change.oc.formwidget');
+                $copy.find(':input').first().trigger('change');
+            }
+        });
+    });
 
     //
     // Hidden bricks (the eye button): stored with _hidden = 1, not shown on the website

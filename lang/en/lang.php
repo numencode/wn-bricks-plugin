@@ -10,6 +10,9 @@ return [
         'hide'   => 'Hide on the website',
         'show'   => 'Show on the website',
         'hidden' => 'Hidden',
+        'duplicate'        => 'Duplicate',
+        'duplicate_failed' => 'The brick could not be duplicated. Reload the page and try again.',
+        'duplicate_max'    => 'No more bricks can be added.',
     ],
     'unknown'     => [
         'name'        => 'Unknown brick (:code)',

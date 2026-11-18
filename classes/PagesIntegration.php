@@ -36,6 +36,7 @@ class PagesIntegration
         // After Winter.Pages adds its Preview tab (priority PHP_INT_MIN + 1)
         Event::listen('backend.form.extendFieldsBefore', [static::class, 'movePreview'], PHP_INT_MIN);
         Event::listen('cms.page.initComponents', [ComponentBricks::class, 'addComponents']);
+        BrickDuplicator::register();
 
         if (class_exists(Page::class)) {
             PermissionGuard::register();
