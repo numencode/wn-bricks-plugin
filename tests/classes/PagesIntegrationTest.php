@@ -128,6 +128,76 @@ class PagesIntegrationTest extends BricksTestCase
         $this->assertContains('viewBag[bricks]', $form->model->translatable);
     }
 
+    /**
+     * @return array<string, mixed> Winter.Pages' Preview field
+     */
+    protected function previewField(): array
+    {
+        return ['tab' => 'winter.pages::lang.editor.preview', 'type' => 'partial', 'permissions' => ['winter.pages.access_preview']];
+    }
+
+    public function testThePreviewMovesNextToABricksFieldInTheUpperTabs(): void
+    {
+        $form = $this->makeForm(new Page(), ['markup' => ['type' => 'richeditor'], '_preview' => $this->previewField()]);
+        $form->tabs['fields'] = [
+            'viewBag[layout]'     => ['type' => 'dropdown', 'tab' => PagesIntegration::SETTINGS_TAB],
+            'viewBag[meta_title]' => ['type' => 'text', 'tab' => 'cms::lang.editor.meta'],
+        ] + $form->tabs['fields'];
+        PagesIntegration::extendForm($form);
+        PagesIntegration::movePreview($form);
+
+        $this->assertSame(['markup'], array_keys($form->secondaryTabs['fields']));
+        // Content, Preview, Meta, Settings
+        $this->assertSame(['viewBag[bricks]', '_preview', 'viewBag[meta_title]', 'viewBag[layout]'], array_keys($form->tabs['fields']));
+        $this->assertSame('bricks-preview', $form->tabs['fields']['_preview']['cssClass']);
+        $this->assertSame(['winter.pages.access_preview'], $form->tabs['fields']['_preview']['permissions']);
+        $this->assertSame('icon-crosshairs', $form->tabs['icons']['winter.pages::lang.editor.preview']);
+    }
+
+    public function testTabsAreSortedForEditingBricks(): void
+    {
+        $bricks = ['type' => 'repeater', 'containerAttributes' => ['data-bricks' => '{}']];
+        $fields = [
+            'layout'  => ['tab' => PagesIntegration::SETTINGS_TAB],
+            'hidden'  => ['tab' => PagesIntegration::SETTINGS_TAB],
+            'meta'    => ['tab' => 'Meta'],
+            'seo'     => ['tab' => 'SEO'],
+            'intro'   => ['tab' => 'Content', 'type' => 'text'],
+            'bricks'  => ['tab' => 'Content'] + $bricks,
+            'aside'   => ['tab' => 'Aside'] + $bricks,
+            'preview' => ['tab' => 'Preview'],
+        ];
+
+        $this->assertSame(
+            ['intro', 'bricks', 'aside', 'preview', 'meta', 'seo', 'layout', 'hidden'],
+            array_keys(PagesIntegration::sortTabs($fields, 'Preview')),
+        );
+        $this->assertSame([], PagesIntegration::sortTabs([], 'Preview'));
+    }
+
+    public function testThePreviewStaysWhenTheBricksAreInTheLowerTabs(): void
+    {
+        // Without bricks in the upper tabs (a lower bricks field gets its own tab next to the Preview anyway)
+        $form = $this->makeForm(new Page(), ['viewBag[aside]' => ['type' => 'bricks', 'tab' => 'Aside'], '_preview' => $this->previewField()]);
+        $form->tabs = ['fields' => ['viewBag[layout]' => ['type' => 'dropdown']]];
+        PagesIntegration::extendForm($form);
+        PagesIntegration::movePreview($form);
+
+        $this->assertArrayHasKey('_preview', $form->secondaryTabs['fields']);
+        $this->assertArrayNotHasKey('_preview', $form->tabs['fields']);
+
+        // Nested forms and forms without a Preview are left alone
+        $nested = $this->makeForm(new Page(), ['_preview' => $this->previewField()], nested: true);
+        PagesIntegration::extendForm($nested);
+        PagesIntegration::movePreview($nested);
+        $this->assertArrayHasKey('_preview', $nested->secondaryTabs['fields']);
+
+        $noPreview = $this->makeForm(new Page(), []);
+        PagesIntegration::extendForm($noPreview);
+        PagesIntegration::movePreview($noPreview);
+        $this->assertArrayNotHasKey('_preview', $noPreview->tabs['fields']);
+    }
+
     public function testOtherFormsAreNotTouched(): void
     {
         $model = new \stdClass();

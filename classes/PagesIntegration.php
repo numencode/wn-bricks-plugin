@@ -25,9 +25,16 @@ class PagesIntegration
 {
     public const FIELD_TYPE = 'bricks';
 
+    /**
+     * The tab of Winter.Pages' page settings (layout, hidden, …).
+     */
+    public const SETTINGS_TAB = 'cms::lang.editor.settings';
+
     public static function register(): void
     {
         Event::listen('backend.form.extendFieldsBefore', [static::class, 'extendForm']);
+        // After Winter.Pages adds its Preview tab (priority PHP_INT_MIN + 1)
+        Event::listen('backend.form.extendFieldsBefore', [static::class, 'movePreview'], PHP_INT_MIN);
         Event::listen('cms.page.initComponents', [ComponentBricks::class, 'addComponents']);
 
         if (class_exists(Page::class)) {
@@ -61,6 +68,82 @@ class PagesIntegration
                 $form->{$container} = array_merge($form->{$container}, ['fields' => $fields]);
             }
         }
+    }
+
+    /**
+     * Winter.Pages shows its Preview in the lower (secondary) tabs, which only get the height the upper tabs leave.
+     * A bricks field in the upper tabs (NumenCode.Fundamentals' pages_viewbag_primary_tabs, on by default, puts the
+     * layout's fields there; or placement="primary") grows with every brick, so the Preview shrinks to a strip.
+     * In that case the Preview becomes an upper tab next to the bricks, with a height of its own (assets/css/bricks.css),
+     * and the tabs are ordered for editing bricks: Content, Preview, Meta, Settings (sortTabs()).
+     */
+    public static function movePreview(Form $form): void
+    {
+        if ($form->isNested || !$form->model instanceof Page) {
+            return;
+        }
+
+        $secondary = (array) ($form->secondaryTabs['fields'] ?? []);
+        $preview = $secondary['_preview'] ?? null;
+
+        if (!is_array($preview) || !static::hasBricksField((array) ($form->tabs['fields'] ?? []))) {
+            return;
+        }
+
+        unset($secondary['_preview']);
+        $tab = $preview['tab'] ?? 'winter.pages::lang.editor.preview';
+        $preview['cssClass'] = trim(($preview['cssClass'] ?? '') . ' bricks-preview');
+
+        $form->tabs = array_merge($form->tabs, [
+            'fields' => static::sortTabs($form->tabs['fields'] + ['_preview' => $preview], $tab),
+            'icons'  => (array) ($form->tabs['icons'] ?? []) + [$tab => 'icon-crosshairs'],
+        ]);
+        $form->secondaryTabs = array_merge((array) $form->secondaryTabs, ['fields' => $secondary]);
+    }
+
+    /**
+     * Orders the upper tabs for editing bricks: the tabs with bricks fields, the Preview, the other tabs (e.g. Meta),
+     * the page settings last. A form shows its tabs in the order of their first field, and opens the first one.
+     *
+     * @param array<string, mixed> $fields
+     * @return array<string, mixed>
+     */
+    public static function sortTabs(array $fields, string $previewTab): array
+    {
+        $tabs = [];
+
+        foreach ($fields as $name => $config) {
+            $tabs[is_array($config) ? (string) ($config['tab'] ?? '') : ''][$name] = $config;
+        }
+
+        $rank = fn (string $tab) => match (true) {
+            static::hasBricksField($tabs[$tab]) => 0,
+            $tab === $previewTab                => 1,
+            $tab === self::SETTINGS_TAB         => 3,
+            default                             => 2,
+        };
+
+        // Stable: tabs of the same rank keep their order
+        $order = array_keys($tabs);
+        usort($order, fn ($a, $b) => $rank((string) $a) <=> $rank((string) $b));
+
+        return array_merge(...array_map(fn ($tab) => $tabs[$tab], $order));
+    }
+
+    /**
+     * Whether a field list contains a bricks field (already replaced by FieldBuilder: it carries data-bricks).
+     *
+     * @param array<string, mixed> $fields
+     */
+    public static function hasBricksField(array $fields): bool
+    {
+        foreach ($fields as $config) {
+            if (is_array($config) && isset($config['containerAttributes']['data-bricks'])) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

@@ -121,3 +121,10 @@ li.field-repeater-item.bricks-item--editable > .bricks-item-header {
     padding-top: 0;
     border-top: 0;
 }
+
+/* Winter.Pages' Preview, moved to an upper tab next to the bricks (PagesIntegration::movePreview()): the tab has no
+   height of its own, so the preview fills the window below the tabs. More specific than Pages' "height: 100%". */
+div.form-group.bricks-preview[data-field-name="_preview"] div[data-control="page-preview"] iframe {
+    height: calc(100vh - 385px);
+    min-height: 400px;
+}
