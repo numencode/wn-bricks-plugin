@@ -69,20 +69,51 @@ class BrickRenderer
     {
         $staticPage = $this->controller->getPage()?->apiBag['staticPage'] ?? null;
 
-        return $staticPage instanceof Page ? $this->renderList(static::bricks($staticPage, $field), $field) : '';
+        if (!$staticPage instanceof Page) {
+            return '';
+        }
+
+        return $this->renderList(static::bricks($staticPage, $field), $field, static::isPreview($this->controller));
+    }
+
+    /**
+     * Whether the request is Winter.Pages' preview of the page being edited (its URL /winter.pages/preview/<form>).
+     */
+    public static function isPreview(Controller $controller): bool
+    {
+        return Str::startsWith((string) $controller->getPage()?->url, '/winter.pages/preview/');
+    }
+
+    /**
+     * A rendered brick between invisible markers, so the editor (assets/js/bricks.js) can scroll the preview to it and
+     * highlight it: data-bricks-preview="<field>:<index>" before, data-bricks-preview-end after.
+     */
+    public static function previewMarkers(string $html, string $field, int $index): string
+    {
+        return sprintf(
+            '<span data-bricks-preview="%s:%d" hidden></span>%s<span data-bricks-preview-end hidden></span>',
+            e($field),
+            $index,
+            $html,
+        );
     }
 
     /**
      * @param array<int, mixed> $bricks
      */
-    public function renderList(array $bricks, string $field = self::DEFAULT_FIELD): string
+    public function renderList(array $bricks, string $field = self::DEFAULT_FIELD, bool $markers = false): string
     {
         $html = '';
 
         foreach (array_values($bricks) as $index => $brick) {
-            if (is_array($brick)) {
-                $html .= $this->renderBrick($brick, $index, $field);
+            if (!is_array($brick)) {
+                continue;
             }
+
+            $brickHtml = $this->renderBrick($brick, $index, $field);
+
+            // In the editor's preview, bricks that show something get markers (nothing for hidden or empty bricks)
+            $html .= $markers && trim($brickHtml) !== '' ? static::previewMarkers($brickHtml, $field, $index) : $brickHtml;
         }
 
         return $html;

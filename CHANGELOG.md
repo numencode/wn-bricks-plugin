@@ -37,6 +37,7 @@ The first release.
   - an optional anchor and CSS class on every brick ("Advanced")
   - "Edit …" links where a component brick's content is managed elsewhere
   - Winter.Pages' preview as a full-height tab, and the tabs ordered Content, Preview, Meta, Settings
+  - clicking a brick scrolls the preview to it and outlines it; reordering refreshes the preview
 - **Permissions:** `numencode.bricks.use_html` for HTML bricks, and `permissions` on any brick type. Users without them
   can't add these bricks and see existing ones read-only; the server rejects saves that add or change them, in every
   language.

@@ -757,6 +757,161 @@
         window.setTimeout(updateFallbackNotices, 0);
     });
 
+    //
+    // Winter.Pages' preview: the last brick clicked is scrolled into view and outlined there (at once when the preview
+    // is visible, after it reloads, and when its tab is opened). The preview marks each brick it renders
+    // (BrickRenderer::previewMarkers()). Edits refresh the preview through Winter's dependsOn ("change" on the field);
+    // a reorder by drag doesn't fire one, so it's fired here.
+    //
+
+    var previewTarget = null;
+
+    // "<field>:<index>" of a brick, as the preview marks it (the field name without "viewBag[…]")
+    function previewKey($item) {
+        var name = String($item.closest('[data-bricks]').attr('data-field-name') || ''),
+            match = name.match(/^viewBag\[([^\]]+)\]$/);
+
+        return (match ? match[1] : name) + ':' + $item.parent().children('.field-repeater-item').index($item);
+    }
+
+    function showInPreview($form) {
+        if (!previewTarget || previewTarget.form !== $form[0] || !$.contains(document, previewTarget.item)) {
+            return;
+        }
+
+        var frame = $form.find('[data-field-name="_preview"] iframe')[0],
+            doc,
+            win;
+
+        if (!frame || !frame.offsetParent) {
+            return;
+        }
+
+        try {
+            doc = frame.contentDocument;
+            win = frame.contentWindow;
+        } catch (e) {
+            return;
+        }
+
+        var key = previewKey($(previewTarget.item));
+
+        // The brick's box in document coordinates: the elements between its markers
+        function brickBox() {
+            var start = doc && doc.body ? doc.querySelector('[data-bricks-preview="' + key + '"]') : null,
+                box = {top: Infinity, left: Infinity, bottom: -Infinity, right: -Infinity};
+
+            for (var node = start ? start.nextElementSibling : null; node && !node.hasAttribute('data-bricks-preview-end'); node = node.nextElementSibling) {
+                var rect = node.getBoundingClientRect();
+
+                if (rect.width || rect.height) {
+                    box.top = Math.min(box.top, rect.top + win.pageYOffset);
+                    box.left = Math.min(box.left, rect.left + win.pageXOffset);
+                    box.bottom = Math.max(box.bottom, rect.bottom + win.pageYOffset);
+                    box.right = Math.max(box.right, rect.right + win.pageXOffset);
+                }
+            }
+
+            return box.top === Infinity ? null : box;
+        }
+
+        function outline(box) {
+            var mark = doc.createElement('div');
+
+            mark.setAttribute('style', [
+                'position: absolute', 'z-index: 2147483647', 'pointer-events: none', 'box-sizing: border-box',
+                'border: 2px solid #3498db', 'border-radius: 4px', 'background: rgba(52, 152, 219, 0.08)',
+                'transition: opacity 0.6s',
+                'top: ' + (box.top - 4) + 'px', 'left: ' + (box.left - 4) + 'px',
+                'width: ' + (box.right - box.left + 8) + 'px', 'height: ' + (box.bottom - box.top + 8) + 'px'
+            ].join('; '));
+            doc.body.appendChild(mark);
+
+            window.setTimeout(function () { mark.style.opacity = '0'; }, 1600);
+            window.setTimeout(function () { mark.parentNode && mark.parentNode.removeChild(mark); }, 2300);
+        }
+
+        // Scroll, then check again: lazy images above the brick load while scrolling and move it down
+        function scrollToBox(box, attempt) {
+            // A quarter down the preview, so a theme's fixed header doesn't cover it
+            win.scrollTo({top: Math.max(0, box.top - Math.max(40, win.innerHeight / 4)), behavior: attempt === 0 ? 'smooth' : 'auto'});
+
+            window.setTimeout(function () {
+                var moved = brickBox();
+
+                if (moved && Math.abs(moved.top - box.top) > 4 && attempt < 4) {
+                    scrollToBox(moved, attempt + 1);
+                } else {
+                    outline(moved || box);
+                }
+            }, 450);
+        }
+
+        var box = brickBox();
+
+        if (box) {
+            scrollToBox(box, 0);
+        }
+    }
+
+    function setPreviewTarget($item) {
+        previewTarget = {form: $item.closest('form')[0], item: $item[0]};
+    }
+
+    // Clicking a brick's bar (collapsed or open) shows it in the preview; working in a brick makes it the target
+    $(document).on('click', '[data-bricks] .bricks-item > .repeater-item-collapsed-title, [data-bricks] .bricks-item > .bricks-item-header', function () {
+        var $item = $(this).closest('.bricks-item');
+
+        setPreviewTarget($item);
+        showInPreview($item.closest('form'));
+    });
+
+    $(document).on('focusin', '[data-bricks] .bricks-item', function (ev) {
+        var $item = $(ev.target).closest('.bricks-item');
+
+        if ($item[0] === this) {
+            setPreviewTarget($item);
+        }
+    });
+
+    // A tab is opened (the Preview tab: showInPreview() only acts when the preview is visible). The tab link's href is
+    // only the URL hash, not the pane, so the form is taken from the link.
+    $(document).on('shown.bs.tab', function (ev) {
+        var $form = $(ev.target).closest('form');
+
+        window.setTimeout(function () { showInPreview($form); }, 50);
+    });
+
+    // The preview (re)loaded, e.g. after an edit
+    function bindPreviewFrames() {
+        $('[data-field-name="_preview"] iframe').each(function () {
+            if (this.getAttribute('data-bricks-bound')) {
+                return;
+            }
+
+            this.setAttribute('data-bricks-bound', '1');
+            $(this).on('load', function () {
+                showInPreview($(this).closest('form'));
+            });
+        });
+    }
+
+    // A reorder by drag: refresh the preview (the list's field fires "change" like an edit)
+    $(document).on('mousedown', '[data-bricks] .repeater-item-handle', function () {
+        var $list = $(this).closest('.field-repeater-items'),
+            before = $list.children('.field-repeater-item').toArray();
+
+        $(document).one('mouseup', function () {
+            window.setTimeout(function () {
+                var after = $list.children('.field-repeater-item').toArray();
+
+                if (after.some(function (item, index) { return item !== before[index]; })) {
+                    $list.closest('[data-field-name]').trigger('change.oc.formwidget');
+                }
+            }, 50);
+        });
+    });
+
     function update() {
         patchRepeater();
         processPalettes();
@@ -764,6 +919,7 @@
         addItemHeaders();
         addToggleButtons();
         updateFallbackNotices();
+        bindPreviewFrames();
     }
 
     patchRepeater();

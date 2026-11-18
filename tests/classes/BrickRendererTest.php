@@ -101,6 +101,24 @@ class BrickRendererTest extends BricksTestCase
         $this->assertStringContainsString('<div id="hello"><p class="greeting">Hello Wrapped (brick_bricks_2)</p>', $main);
     }
 
+    public function testThePreviewMarksTheBricksThatShowSomething(): void
+    {
+        $controller = new Controller(Theme::getActiveTheme());
+        $controller->run('/empty');
+
+        $html = (new BrickRenderer($controller))->renderList([
+            ['_group' => 'text', 'content' => '<p>A</p>'],
+            ['_group' => 'text', 'content' => '<p>Hidden</p>', '_hidden' => '1'],
+            ['_group' => 'text', 'content' => ''],
+            ['_group' => 'text', 'content' => '<p>D</p>'],
+        ], 'aside', true);
+
+        $this->assertMatchesRegularExpression('#^<span data-bricks-preview="aside:0" hidden></span>\s*<div class="brick brick--text"><p>A</p></div>\s*<span data-bricks-preview-end hidden></span>#', $html);
+        $this->assertStringContainsString('<span data-bricks-preview="aside:3" hidden></span>', $html, 'positions in the list');
+        $this->assertSame(2, substr_count($html, 'data-bricks-preview-end'), 'hidden and empty bricks get no markers');
+        $this->assertFalse(BrickRenderer::isPreview($controller));
+    }
+
     public function testAnchorAndCssClassValues(): void
     {
         $this->assertSame('o-nas-cez-zid', BrickRenderer::anchor(' O nas: čez zid '));
