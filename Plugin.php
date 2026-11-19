@@ -7,6 +7,11 @@ namespace NumenCode\Bricks;
 use NumenCode\Bricks\Classes\BrickRenderer;
 use NumenCode\Bricks\Classes\PagesIntegration;
 use NumenCode\Bricks\Classes\VideoUrl;
+use NumenCode\Bricks\Console\ClearMarkup;
+use NumenCode\Bricks\Console\ConvertPages;
+use NumenCode\Bricks\Console\CreateBrick;
+use NumenCode\Bricks\Console\ListBricks;
+use NumenCode\Bricks\Console\ValidateBricks;
 use System\Classes\PluginBase;
 
 class Plugin extends PluginBase
@@ -27,6 +32,15 @@ class Plugin extends PluginBase
             'icon'        => 'icon-cubes',
             'homepage'    => 'https://www.numencode.com',
         ];
+    }
+
+    public function register(): void
+    {
+        $this->registerConsoleCommand('bricks.list', ListBricks::class);
+        $this->registerConsoleCommand('bricks.validate', ValidateBricks::class);
+        $this->registerConsoleCommand('bricks.create', CreateBrick::class);
+        $this->registerConsoleCommand('bricks.convert-pages', ConvertPages::class);
+        $this->registerConsoleCommand('bricks.clear-markup', ClearMarkup::class);
     }
 
     public function boot(): void

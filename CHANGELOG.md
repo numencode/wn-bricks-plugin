@@ -30,7 +30,8 @@ The first release.
 - **Editor:**
   - collapsed bricks show their type and a summary of their content
   - "Expand all" / "Collapse all"
-  - the "Add brick" list grouped by plugin (e.g. "NumenCode Widgets"), with the components' icons
+  - the "Add brick" list in sections: the theme's own brick types first (under the theme's name), then the general
+    ones, then each plugin's (e.g. "NumenCode Widgets"), with the components' icons
   - duplicate a brick
   - copy and paste bricks between pages and languages (kept in the browser's local storage)
   - hide a brick on the website without deleting it
@@ -43,5 +44,15 @@ The first release.
   language.
 - **Bricks of unknown types** (e.g. a removed theme definition) keep their content when the page is saved; they are
   shown as "Unknown brick" and not rendered.
+- **Console commands:**
+  - `create:brick` scaffolds a brick type in a theme or a plugin, or copies an existing type (`--override`) or only its
+    markup (`--markup`) into the theme
+  - `bricks:list` lists the brick types, where each comes from and what it overrides
+  - `bricks:validate` checks every definition and markup file (field types, Twig, components, lang keys,
+    permissions, unused partials) and exits with 1 on errors, for CI (`--theme-only`, `--strict`)
+  - `bricks:convert-pages` turns the content of static pages into bricks in every language: snippets into component
+    bricks, headings, images and dividers into their bricks, the rest into text bricks; the old content is kept
+  - `bricks:clear-markup` removes the old content of converted pages once they are checked
+- `BrickRegistry::sources()` lists every definition of each brick code, also the replaced ones.
 
 [Unreleased]: https://github.com/numencode/wn-bricks-plugin/commits/main

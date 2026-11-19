@@ -59,9 +59,10 @@ class PagesIntegrationTest extends BricksTestCase
         $this->assertSame(['type' => 'text'], $form->fields['viewBag[title]']);
 
         // The offered types first (allow order), then all other types for existing bricks, hidden in "Add brick"
-        $this->assertSame(['text', 'quote'], array_slice(array_keys($bricks['groups']), 0, 2));
-        $this->assertArrayHasKey('heading', $bricks['groups']);
+        // (the groups are sorted by section, so the theme's own "greeting" comes first, hidden)
         $hidden = explode(',', $bricks['containerAttributes']['data-bricks-hidden']);
+        $this->assertSame(['text', 'quote'], array_values(array_diff(array_keys($bricks['groups']), $hidden)));
+        $this->assertArrayHasKey('heading', $bricks['groups']);
         $this->assertContains('heading', $hidden);
         $this->assertNotContains('text', $hidden);
         $this->assertNotContains('quote', $hidden);

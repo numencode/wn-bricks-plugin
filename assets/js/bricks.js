@@ -3,7 +3,8 @@
  *
  * - "Add brick" list: hides the types in data-bricks-hidden="code,code" (not allowed in this field, or not permitted
  *   for the user). The repeater keeps their groups so existing bricks keep their values; only new ones can't be added.
- *   Each plugin's types get a heading (data-bricks "sections"); the general types come first, without one.
+ *   The theme's own types, then the general ones, then each plugin's types; each section has a heading (data-bricks
+ *   "sections"), except the general types when they come first.
  *   The list is a <script data-group-palette-template>, re-rendered on AJAX updates (e.g. a locale switch).
  * - Collapsed bricks show "Type: summary": the value of the type's titleFrom field, or of its first filled field.
  * - "Expand all" / "Collapse all" buttons above the bricks.

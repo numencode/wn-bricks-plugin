@@ -11,8 +11,16 @@ use Winter\Storm\Exception\SystemException;
  */
 class InvalidBrickException extends SystemException
 {
+    /**
+     * The problem alone, without the code and file of the message.
+     */
+    public string $problem = '';
+
     public static function make(string $code, string $source, string $problem): self
     {
-        return new self(sprintf('Brick type "%s" (%s): %s', $code, $source, $problem));
+        $exception = new self(sprintf('Brick type "%s" (%s): %s', $code, $source, $problem));
+        $exception->problem = $problem;
+
+        return $exception;
     }
 }

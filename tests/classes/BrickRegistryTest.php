@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NumenCode\Bricks\Tests\Classes;
 
 use NumenCode\Bricks\Classes\BrickRegistry;
+use NumenCode\Bricks\Classes\BrickSource;
 use NumenCode\Bricks\Classes\InvalidBrickException;
 use NumenCode\Bricks\Tests\BricksTestCase;
 
@@ -64,7 +65,8 @@ class BrickRegistryTest extends BricksTestCase
 
         // The base set and the theme's own types are general
         $this->assertSame('', $types['text']->plugin);
-        $this->assertSame('', $types['quote']->plugin);
+        $this->assertSame('', $types['quote']->plugin, 'replaces the base set\'s quote, so it stays in its section');
+        $this->assertSame('theme:bricktest', $types['greeting']->plugin, 'the theme\'s own type');
 
         // New type with its markup in the theme's partials/bricks/
         $this->assertSame('Quote', $types['quote']->label());
@@ -118,6 +120,42 @@ class BrickRegistryTest extends BricksTestCase
 
         $this->assertNotSame($first, $this->registry()->get('quote', $theme));
         $this->assertEquals($first, $this->registry()->get('quote', $theme));
+    }
+
+    public function testSourcesListEveryDefinitionInOrder(): void
+    {
+        $theme = $this->useFixtureTheme('bricktest');
+        $this->registerCallout();
+        $this->registry()->registerCallback(fn (BrickRegistry $registry) => $registry->registerBricks([
+            'heading' => $this->fixturePath('bricks/callout'),
+        ]));
+
+        $sources = $this->registry()->sources();
+        $describe = fn (string $code) => array_map(fn (BrickSource $source) => $source->describe(), $sources[$code]);
+
+        $this->assertSame(['NumenCode.Bricks', 'callback', 'theme bricktest'], $describe('heading'));
+        $this->assertSame(['callback (Test)'], $describe('callout'));
+        $this->assertSame(['NumenCode.Bricks', 'theme bricktest'], $describe('quote'));
+
+        [$base, $callback, $themed] = $sources['heading'];
+        $this->assertSame([BrickSource::PLUGIN, BrickSource::CALLBACK, BrickSource::THEME], [$base->origin, $callback->origin, $themed->origin]);
+        $this->assertStringEndsWith('themes/bricktest/bricks/heading.yaml', str_replace('\\', '/', $themed->definition));
+
+        // Without a theme partial the theme definition uses the markup of the type it replaces
+        $this->assertSame($callback->markup, $themed->markup);
+        $this->assertStringEndsWith('themes/bricktest/partials/bricks/quote.htm', str_replace('\\', '/', $sources['quote'][1]->markup));
+        $this->assertSame($sources['quote'][1]->markup, BrickRegistry::themePartial($theme, 'quote'));
+        $this->assertNull(BrickRegistry::themePartial($theme, 'heading'));
+
+        // The last definition is the type in use
+        $this->assertEquals(end($sources['heading'])->makeType(), $this->registry()->get('heading'));
+    }
+
+    public function testSourcesDontReadTheDefinitions(): void
+    {
+        $this->useFixtureTheme('broken');
+
+        $this->assertSame(['theme broken'], array_map(fn (BrickSource $source) => $source->describe(), $this->registry()->sources()['oops']));
     }
 
     public function testAnInvalidThemeDefinitionIsReported(): void

@@ -35,6 +35,12 @@ class FieldBuilder
     public const CLASS_FIELD = '_class';
 
     /**
+     * The section of a theme's own brick types: BrickType::$plugin = THEME_SECTION . <theme directory>. Its heading is
+     * the theme's name, and it comes first in the "Add brick" list (the types made for the website).
+     */
+    public const THEME_SECTION = 'theme:';
+
+    /**
      * Repeater groups: code => [name, description, icon, fields]. Names and descriptions stay lang keys; the
      * repeater translates them. Every group also gets the advanced fields (anchor, CSS class) and the HIDDEN_FIELD.
      *
@@ -171,7 +177,8 @@ class FieldBuilder
         $sections = [];
 
         foreach (static::sections($types) as $plugin => $codes) {
-            if ($plugin !== '') {
+            // The general types get a heading only when the theme's section comes before them
+            if ($plugin !== '' || $sections) {
                 $sections[] = ['label' => static::sectionLabel((string) $plugin), 'codes' => $codes];
             }
         }
@@ -187,8 +194,8 @@ class FieldBuilder
     }
 
     /**
-     * The type codes per section of the "Add brick" list: plugin => codes, the general types ('') first, then the
-     * plugins by their label. The types keep their order within a section.
+     * The type codes per section of the "Add brick" list: plugin => codes. The theme's own types first (THEME_SECTION),
+     * then the general types (''), then the plugins by their label. The types keep their order within a section.
      *
      * @param array<string, BrickType> $types
      * @return array<string, array<int, string>>
@@ -201,12 +208,22 @@ class FieldBuilder
             $sections[$type->plugin][] = (string) $code;
         }
 
-        $general = $sections[''] ?? null;
-        unset($sections['']);
+        $first = [];
 
+        foreach ($sections as $plugin => $codes) {
+            if (str_starts_with((string) $plugin, self::THEME_SECTION)) {
+                $first[$plugin] = $codes;
+            }
+        }
+
+        if (isset($sections[''])) {
+            $first[''] = $sections[''];
+        }
+
+        $sections = array_diff_key($sections, $first);
         uksort($sections, fn (string $a, string $b) => strnatcasecmp(static::sectionLabel($a), static::sectionLabel($b)));
 
-        return $general === null ? $sections : ['' => $general] + $sections;
+        return $first + $sections;
     }
 
     /**
@@ -230,10 +247,22 @@ class FieldBuilder
 
     /**
      * The heading of a plugin's section: the plugin's author namespace and name, e.g. "NumenCode Widgets" (just the
-     * name when it already starts with the author); the identifier when no such plugin is installed.
+     * name when it already starts with the author); the identifier when no such plugin is installed. The theme's
+     * section: the theme's name. The general types: "General".
      */
     public static function sectionLabel(string $plugin): string
     {
+        if ($plugin === '') {
+            return \Lang::get('numencode.bricks::lang.sections.general');
+        }
+
+        if (str_starts_with($plugin, self::THEME_SECTION)) {
+            $dir = substr($plugin, strlen(self::THEME_SECTION));
+            $name = \Cms\Classes\Theme::exists($dir) ? \Cms\Classes\Theme::load($dir)->getConfigValue('name') : null;
+
+            return is_string($name) && trim($name) !== '' ? trim($name) : $dir;
+        }
+
         $details = PluginManager::instance()->findByIdentifier($plugin)?->pluginDetails() ?? [];
         $name = is_string($details['name'] ?? null) ? trim(\Lang::get($details['name'])) : '';
 

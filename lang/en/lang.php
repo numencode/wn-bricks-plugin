@@ -6,6 +6,9 @@ return [
         'description' => 'Translatable block-based content builder for static pages.',
     ],
     'edit_link'   => 'Edit :type',
+    'sections'    => [
+        'general' => 'General',
+    ],
     'actions'     => [
         'preview' => 'Show in the preview',
         'hide'   => 'Hide on the website',

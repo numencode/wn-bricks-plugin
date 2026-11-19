@@ -23,10 +23,13 @@ plugins or themes, and themes can override every brick's markup.
 - **Translations** – with [Winter.Translate](https://github.com/wintercms/wn-translate-plugin), each language has its own
   list of bricks, with "copy from" (and machine translation of the marked fields).
 - **A comfortable editor** – collapsed bricks show their type and a summary of their content; "Expand all" /
-  "Collapse all"; duplicate, hide, and copy and paste between pages and languages; an anchor and a CSS class on every brick; the "Add brick" list grouped
-  by plugin; "Edit …" links to where a component brick's content is managed; the page preview as its own tab.
+  "Collapse all"; duplicate, hide, and copy and paste between pages and languages; an anchor and a CSS class on every brick; the "Add brick" list in
+  sections (the theme's own bricks first, then the general ones, then each plugin's); "Edit …" links to where a component brick's content is managed; the page preview as its own tab.
 - **Safe editing** – brick types can require permissions (checked on the server, too), and bricks whose type no
   longer exists keep their content.
+- **Developer commands** – `create:brick` scaffolds a brick type or copies one into the theme, `bricks:list` shows where
+  each type comes from and what it overrides, `bricks:validate` checks definitions and markup in CI,
+  `bricks:convert-pages` turns existing pages (rich editor content and snippets) into bricks.
 - English and Slovenian backend translations.
 
 ## Requirements
@@ -207,12 +210,99 @@ Brick types can also be registered from code with
 ### In a theme
 
 - `themes/<theme>/bricks/<code>.yaml` – a new brick type, or the fields of an existing one (the definition replaces
-  it).
+  it). The theme's new types come first in the "Add brick" list, under the theme's name; a replaced type stays in
+  its section.
 - `themes/<theme>/partials/bricks/<code>.htm` – the markup of a brick type, plugin types included. It's a regular CMS
   partial.
 
 Later definitions replace earlier ones with the same code: snippet components, the base set, other plugins, callbacks,
 the theme.
+
+## Console commands
+
+### `create:brick` – scaffold a brick type
+
+```bash
+php artisan create:brick call-to-action                       # in the active theme
+php artisan create:brick call-to-action --plugin=Acme.Shop    # in a plugin
+php artisan create:brick image --override                     # copy a brick type into the theme, to change it there
+php artisan create:brick image --markup                       # copy only its markup
+```
+
+A new type gets a definition with a title and a text field and matching markup: `bricks/<code>.yaml` +
+`partials/bricks/<code>.htm` in a theme (in the "Add brick" list right away), or `bricks/<code>.yaml` + `.htm` in a
+plugin (the command prints the line for `registerBricks()`). `--override` copies the definition and markup of the brick
+type in use into the theme; `--markup` only the markup. A component brick from a snippet gets a definition with its
+component, to override the generated fields.
+
+Options: `--theme=` (default: the active theme), `--name=`, `--icon=`, `--force` (overwrite existing files).
+
+### `bricks:list` – the brick types and their overrides
+
+```bash
+php artisan bricks:list [--theme=demo] [--overrides]
+```
+
+Lists every brick type with where it comes from (a plugin, `theme <name>`, a snippet or a callback), its definition and
+markup files, and what it replaces – an earlier definition with the same code, or only its markup (a theme partial).
+`--overrides` shows only the types that replace something.
+
+### `bricks:validate` – check the definitions (for CI)
+
+```bash
+php artisan bricks:validate [--theme=demo] [--theme-only] [--strict]
+```
+
+Reads every definition separately (also the replaced ones), so one broken file doesn't hide the others, and exits with 1
+when there are errors – add it to your CI pipeline or a deploy check.
+
+- **Errors** (they break the editor or the website): invalid definitions, unknown field types (also in nested forms),
+  Twig syntax errors and unknown filters, functions or tags in the markup, missing or unregistered components.
+- **Warnings:** lang keys that don't exist, permissions that aren't registered, a component brick's field that isn't one
+  of its properties or a `titleFrom` that isn't a field, theme partials that no brick type uses (partials starting
+  with `_` are helpers and skipped) or that a component brick ignores.
+
+`--theme-only` reports only problems in the theme's files; `--strict` fails on warnings too.
+
+### `bricks:convert-pages` – turn existing pages into bricks
+
+```bash
+php artisan bricks:convert-pages about /contact --dry-run   # by file name or URL; show the bricks, save nothing
+php artisan bricks:convert-pages --all                      # all static pages, every language
+```
+
+Converts the content of static pages (Winter.Pages' rich editor) into bricks, in the default language's file and in
+every translation that has its own content. The top-level parts of the content become:
+
+| Content | Brick |
+|---|---|
+| A snippet (`<figure data-snippet … data-property-…>`) | Its component brick, with the properties as values |
+| `<h2>`–`<h4>` with plain text (an `id` becomes the anchor) | Heading |
+| A paragraph or `<figure>` with only an image from the media library (and a caption) | Image |
+| `<hr>` | Divider |
+| Everything else (paragraphs, lists, tables, headings with links, …) | Text, one per run between the bricks above |
+
+Empty paragraphs between them are dropped. `--no-split` makes only component and text bricks. Snippets inside other
+HTML (e.g. a table) and snippets without a brick type stay in a text brick, with a warning. Layout tables are best
+rebuilt by hand, e.g. as Columns bricks.
+
+The page's **old content is kept**, so nothing is lost and the page still has it if the bricks are removed. Pages that
+already have bricks are skipped unless `--force` is given (which replaces their bricks). The command warns when a
+page's layout has no bricks field yet.
+
+Options: `--all`, `--locale=` (repeatable; `default` or a language code), `--field=` (default `bricks`), `--theme=`,
+`--no-split`, `--dry-run`, `--force`.
+
+### `bricks:clear-markup` – remove the old content
+
+```bash
+php artisan bricks:clear-markup --all --dry-run
+php artisan bricks:clear-markup --all
+```
+
+Once you've checked the converted pages in the browser, this removes their old content. Only files with their own
+bricks are cleared, and only when the page's layout has the bricks field (otherwise the layout would still show the
+old content). It asks before removing (`--force` doesn't). Same options as `bricks:convert-pages`, without `--no-split`.
 
 ## Component bricks
 

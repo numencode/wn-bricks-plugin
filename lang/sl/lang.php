@@ -1,25 +1,28 @@
 <?php
 
 return [
-    'plugin' => [
+    'plugin'      => [
         'name'        => 'Gradniki',
         'description' => 'Prevedljiv urejevalnik vsebine statičnih strani iz gradnikov.',
     ],
     'edit_link'   => 'Uredi: :type',
+    'sections'    => [
+        'general' => 'Splošno',
+    ],
     'actions'     => [
-        'preview' => 'Prikaži v predogledu',
-        'hide'   => 'Skrij na spletni strani',
-        'show'   => 'Prikaži na spletni strani',
-        'hidden' => 'Skrito',
-        'duplicate'        => 'Podvoji',
-        'copy'             => 'Kopiraj (prilepite ga na katerikoli strani ali v katerem koli jeziku)',
-        'copied'           => 'Gradnik je kopiran. Prilepite ga z gumbom "Prilepi" na katerikoli strani ali v katerem koli jeziku.',
-        'paste'            => 'Prilepi gradnik',
-        'paste_title'      => 'Prilepi kopirani gradnik (:type) na konec seznama',
-        'paste_clear'      => 'Pozabi kopirani gradnik',
+        'preview'           => 'Prikaži v predogledu',
+        'hide'              => 'Skrij na spletni strani',
+        'show'              => 'Prikaži na spletni strani',
+        'hidden'            => 'Skrito',
+        'duplicate'         => 'Podvoji',
+        'copy'              => 'Kopiraj (prilepite ga na kateri koli strani ali v katerem koli jeziku)',
+        'copied'            => 'Gradnik je kopiran. Prilepite ga z gumbom "Prilepi" na kateri koli strani ali v katerem koli jeziku.',
+        'paste'             => 'Prilepi gradnik',
+        'paste_title'       => 'Prilepi kopirani gradnik (:type) na konec seznama',
+        'paste_clear'       => 'Pozabi kopirani gradnik',
         'paste_unavailable' => 'Te vrste gradnika tu ni mogoče dodati.',
-        'duplicate_failed' => 'Gradnika ni bilo mogoče podvojiti. Osvežite stran in poskusite znova.',
-        'duplicate_max'    => 'Več gradnikov ni mogoče dodati.',
+        'duplicate_failed'  => 'Gradnika ni bilo mogoče podvojiti. Osvežite stran in poskusite znova.',
+        'duplicate_max'     => 'Več gradnikov ni mogoče dodati.',
     ],
     'fallback'    => [
         'notice' => 'Gradnikov v jeziku :locale še ni, zato spletna stran na tej strani prikazuje gradnike v jeziku :default.',
@@ -34,16 +37,16 @@ return [
         'use_html' => 'Dodajanje in urejanje gradnikov HTML',
         'denied'   => 'Nimate dovoljenja za dodajanje ali spreminjanje gradnikov »:type«.',
     ],
-    'bricks' => [
+    'bricks'      => [
         'heading' => [
             'name'        => 'Naslov',
             'description' => 'Naslov razdelka.',
         ],
-        'text' => [
+        'text'    => [
             'name'        => 'Besedilo',
             'description' => 'Oblikovano besedilo z odstavki, seznami in povezavami.',
         ],
-        'image' => [
+        'image'   => [
             'name'        => 'Slika',
             'description' => 'Ena slika z napisom.',
         ],
@@ -55,15 +58,15 @@ return [
             'name'        => 'Stolpci',
             'description' => 'Dva ali trije stolpci oblikovanega besedila.',
         ],
-        'button' => [
+        'button'  => [
             'name'        => 'Gumb',
             'description' => 'Povezava v obliki gumba.',
         ],
-        'quote' => [
+        'quote'   => [
             'name'        => 'Citat',
             'description' => 'Navedek z avtorjem.',
         ],
-        'video' => [
+        'video'   => [
             'name'        => 'Video',
             'description' => 'Video z YouTuba ali Vimea.',
         ],
@@ -71,20 +74,20 @@ return [
             'name'        => 'Ločilna črta',
             'description' => 'Vodoravna črta med razdelki.',
         ],
-        'spacer' => [
+        'spacer'  => [
             'name'        => 'Razmik',
             'description' => 'Prazen prostor med razdelki.',
         ],
-        'html' => [
+        'html'    => [
             'name'        => 'HTML',
             'description' => 'Poljubna koda HTML (za skrbnike).',
         ],
     ],
-    'field' => [
+    'field'       => [
         'label'  => 'Gradniki',
         'prompt' => 'Dodaj gradnik',
     ],
-    'fields' => [
+    'fields'      => [
         'advanced'            => 'Napredno',
         'anchor'              => 'Sidro',
         'anchor_comment'      => 'Za povezave na ta gradnik, npr. "kontakt" za #kontakt.',
@@ -119,7 +122,7 @@ return [
         'html'                => 'Koda HTML',
         'html_comment'        => 'Vstavi se v stran nespremenjena.',
     ],
-    'options' => [
+    'options'     => [
         'width' => [
             'content' => 'Širina vsebine',
             'wide'    => 'Široko',
@@ -130,7 +133,7 @@ return [
             'secondary' => 'Sekundarni',
             'link'      => 'Povezava',
         ],
-        'size' => [
+        'size'  => [
             'small'  => 'Majhen',
             'medium' => 'Srednji',
             'large'  => 'Velik',

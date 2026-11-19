@@ -133,6 +133,31 @@ class FieldBuilderTest extends BricksTestCase
         $this->assertSame('divider,pages-a,pages-b', $field['containerAttributes']['data-bricks-hidden']);
     }
 
+    public function testTheThemesOwnTypesComeFirstAndTheGeneralTypesThenGetAHeading(): void
+    {
+        $this->useFixtureTheme('bricktest');
+        $types = $this->typesOfPlugins();
+        $types['cta'] = new BrickType(code: 'cta', name: 'CTA', markupPath: 'x.htm', plugin: FieldBuilder::THEME_SECTION . 'bricktest');
+
+        $this->assertSame([
+            'theme:bricktest'  => ['cta'],
+            ''                 => ['text', 'divider'],
+            'Winter.Pages'     => ['pages-a', 'pages-b'],
+            'Winter.Translate' => ['translated'],
+        ], FieldBuilder::sections($types));
+
+        $config = json_decode(FieldBuilder::clientConfig($types), true);
+
+        $this->assertSame([
+            ['label' => 'Bricks test theme', 'codes' => ['cta']],
+            ['label' => 'General', 'codes' => ['text', 'divider']],
+            ['label' => FieldBuilder::sectionLabel('Winter.Pages'), 'codes' => ['pages-a', 'pages-b']],
+            ['label' => FieldBuilder::sectionLabel('Winter.Translate'), 'codes' => ['translated']],
+        ], $config['sections']);
+
+        $this->assertSame('nope', FieldBuilder::sectionLabel(FieldBuilder::THEME_SECTION . 'nope'), 'unknown theme: its directory');
+    }
+
     public function testSectionLabelsAreTheAuthorAndThePluginName(): void
     {
         $pages = FieldBuilder::sectionLabel('Winter.Pages');

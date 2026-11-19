@@ -1,0 +1,17 @@
+name: acme.nope::lang.teaser.name
+permissions: acme.nope.teasers
+fields:
+    title:
+        label: Title
+        type: txt
+    images:
+        type: repeater
+        form:
+            fields:
+                image:
+                    label: numencode.bricks::lang.fields.nope
+                    type: mediafindr
+    style:
+        type: dropdown
+        options:
+            a: numencode.bricks::lang.fields.nope_option

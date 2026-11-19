@@ -23,8 +23,10 @@ use Winter\Storm\Support\Traits\Singleton;
  *
  * Each type knows the plugin that provides it (BrickType::$plugin, for the sections of the "Add brick" list): a snippet's
  * component plugin, or the plugin whose registerBricks() (or callback, by its owner) registered it. NumenCode.Bricks'
- * own types, the theme's new types and callbacks without an owner are general (''). A theme definition that replaces a
- * type stays in that type's section.
+ * own types and callbacks without an owner are general (''); the theme's new types are in the theme's section
+ * (FieldBuilder::THEME_SECTION). A theme definition that replaces a type stays in that type's section.
+ *
+ * sources() lists every definition of each code (also the replaced ones), for bricks:list and bricks:validate.
  *
  * The types are kept per theme for the request; Winter caches the parsed YAML files by their modification time.
  */
@@ -33,16 +35,38 @@ class BrickRegistry
     use Singleton;
 
     /**
+     * Markup partials of a theme that replace a type's markup: partials/bricks/<code>.htm.
+     */
+    public const THEME_PARTIALS = 'partials/bricks';
+
+    /**
+     * The theme's brick type definitions: bricks/<code>.yaml.
+     */
+    public const THEME_DEFINITIONS = 'bricks';
+
+    /**
      * @var array<int, callable(self): void>
      */
     protected array $callbacks = [];
 
     /**
-     * Registrations collected while building: code => [path without extension, owner].
+     * Registrations collected while collecting the sources, in order: [code, path without extension, owner, origin].
      *
-     * @var array<string, array{0: string, 1: string}>
+     * @var array<int, array{0: string, 1: string, 2: string, 3: string}>
      */
     protected array $registrations = [];
+
+    /**
+     * The origin of registerBricks() calls while collecting (BrickSource::PLUGIN or CALLBACK).
+     */
+    protected string $origin = BrickSource::PLUGIN;
+
+    /**
+     * Sources per theme directory ('' without a theme).
+     *
+     * @var array<string, array<string, array<int, BrickSource>>>
+     */
+    protected array $sources = [];
 
     /**
      * Built types per theme directory ('' without a theme).
@@ -70,7 +94,7 @@ class BrickRegistry
     public function registerBricks(array $definitions, string $owner = ''): void
     {
         foreach ($definitions as $code => $path) {
-            $this->registrations[(string) $code] = [(string) $path, $owner];
+            $this->registrations[] = [(string) $code, (string) $path, $owner, $this->origin];
         }
     }
 
@@ -78,13 +102,13 @@ class BrickRegistry
      * All brick types of the theme (default: the active theme).
      *
      * @return array<string, BrickType>
+     * @throws InvalidBrickException
      */
     public function all(?Theme $theme = null): array
     {
         $theme ??= Theme::getActiveTheme();
-        $key = $theme ? $theme->getDirName() : '';
 
-        return $this->types[$key] ??= $this->build($theme);
+        return $this->types[$this->key($theme)] ??= $this->build($theme);
     }
 
     public function get(string $code, ?Theme $theme = null): ?BrickType
@@ -95,6 +119,33 @@ class BrickRegistry
     public function has(string $code, ?Theme $theme = null): bool
     {
         return $this->get($code, $theme) !== null;
+    }
+
+    /**
+     * Every definition of each brick code, in the order they were found; the last one is used, the others are replaced
+     * by it. The definition files are not read, so this works with invalid definitions too.
+     *
+     * @return array<string, array<int, BrickSource>>
+     */
+    public function sources(?Theme $theme = null): array
+    {
+        $theme ??= Theme::getActiveTheme();
+
+        return $this->sources[$this->key($theme)] ??= $this->collect($theme);
+    }
+
+    /**
+     * The theme's markup partial of a brick code (partials/bricks/<code>.htm), or null.
+     */
+    public static function themePartial(?Theme $theme, string $code): ?string
+    {
+        if (!$theme) {
+            return null;
+        }
+
+        $path = $theme->getPath() . '/' . self::THEME_PARTIALS . '/' . $code . '.htm';
+
+        return is_file($path) ? $path : null;
     }
 
     /**
@@ -130,14 +181,71 @@ class BrickRegistry
     public function clearCache(): void
     {
         $this->types = [];
+        $this->sources = [];
+    }
+
+    protected function key(?Theme $theme): string
+    {
+        return $theme ? $theme->getDirName() : '';
     }
 
     /**
      * @return array<string, BrickType>
+     * @throws InvalidBrickException
      */
     protected function build(?Theme $theme): array
     {
+        $types = [];
+
+        foreach ($this->sources($theme) as $code => $sources) {
+            $types[$code] = end($sources)->makeType();
+        }
+
+        return $types;
+    }
+
+    /**
+     * @return array<string, array<int, BrickSource>>
+     */
+    protected function collect(?Theme $theme): array
+    {
+        $sources = [];
+
+        foreach (ComponentBricks::snippetTypes($theme) as $code => $type) {
+            $sources[$code][] = new BrickSource(
+                code: $code,
+                origin: BrickSource::SNIPPET,
+                owner: ComponentBricks::pluginOf((string) $type->component),
+                plugin: $type->plugin,
+                type: $type,
+            );
+        }
+
+        foreach ($this->registrations() as [$code, $path, $owner, $origin]) {
+            $base = preg_replace('/\.(yaml|htm)$/', '', File::symbolizePath($path));
+
+            $sources[$code][] = new BrickSource(
+                code: $code,
+                origin: $origin,
+                owner: $owner,
+                plugin: $owner === 'NumenCode.Bricks' ? '' : $owner,
+                definition: $base . '.yaml',
+                markup: is_file($base . '.htm') ? $base . '.htm' : null,
+            );
+        }
+
+        return $theme ? $this->themeSources($theme, $sources) : $sources;
+    }
+
+    /**
+     * The registrations of all plugins' registerBricks() and the callbacks, in order.
+     *
+     * @return array<int, array{0: string, 1: string, 2: string, 3: string}>
+     */
+    protected function registrations(): array
+    {
         $this->registrations = [];
+        $this->origin = BrickSource::PLUGIN;
 
         $values = PluginManager::instance()->getRegistrationMethodValues('registerBricks');
         $this->registerBricks((array) ($values['NumenCode.Bricks'] ?? []), 'NumenCode.Bricks');
@@ -149,45 +257,47 @@ class BrickRegistry
             }
         }
 
-        foreach ($this->callbacks as $callback) {
-            $callback($this);
+        $this->origin = BrickSource::CALLBACK;
+
+        try {
+            foreach ($this->callbacks as $callback) {
+                $callback($this);
+            }
+        } finally {
+            $this->origin = BrickSource::PLUGIN;
         }
 
-        $types = ComponentBricks::snippetTypes($theme);
-
-        foreach ($this->registrations as $code => [$path, $owner]) {
-            $base = preg_replace('/\.(yaml|htm)$/', '', File::symbolizePath($path));
-            $markup = is_file($base . '.htm') ? $base . '.htm' : null;
-
-            $types[$code] = BrickType::fromYaml($code, $base . '.yaml', $markup)
-                ->withPlugin($owner === 'NumenCode.Bricks' ? '' : $owner);
-        }
-
+        $registrations = $this->registrations;
         $this->registrations = [];
 
-        return $theme ? array_replace($types, $this->themeTypes($theme, $types)) : $types;
+        return $registrations;
     }
 
     /**
-     * The theme's bricks/<code>.yaml definitions.
+     * Adds the theme's bricks/<code>.yaml definitions.
      *
-     * @param array<string, BrickType> $pluginTypes
-     * @return array<string, BrickType>
+     * @param array<string, array<int, BrickSource>> $sources
+     * @return array<string, array<int, BrickSource>>
      */
-    protected function themeTypes(Theme $theme, array $pluginTypes): array
+    protected function themeSources(Theme $theme, array $sources): array
     {
-        $types = [];
-        $files = glob($theme->getPath() . '/bricks/*.yaml') ?: [];
+        $files = glob($theme->getPath() . '/' . self::THEME_DEFINITIONS . '/*.yaml') ?: [];
         sort($files);
 
         foreach ($files as $file) {
             $code = basename($file, '.yaml');
-            $partial = $theme->getPath() . '/partials/bricks/' . $code . '.htm';
-            $markup = is_file($partial) ? $partial : ($pluginTypes[$code]->markupPath ?? null);
+            $replaced = isset($sources[$code]) ? end($sources[$code]) : null;
 
-            $types[$code] = BrickType::fromYaml($code, $file, $markup)->withPlugin($pluginTypes[$code]->plugin ?? '');
+            $sources[$code][] = new BrickSource(
+                code: $code,
+                origin: BrickSource::THEME,
+                owner: $theme->getDirName(),
+                plugin: $replaced ? $replaced->plugin : FieldBuilder::THEME_SECTION . $theme->getDirName(),
+                definition: $file,
+                markup: static::themePartial($theme, $code) ?? $replaced?->markup,
+            );
         }
 
-        return $types;
+        return $sources;
     }
 }

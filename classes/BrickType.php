@@ -36,8 +36,9 @@ final class BrickType
      * @param array<int, string> $permissions Backend permissions needed to add or edit the brick (any of them)
      * @param string|null $titleFrom The field whose value is shown on a collapsed brick (default: the first filled field)
      * @param string|null $editUrl Backend URL (pattern) where the brick's content is edited, {field} = a field's value
-     * @param string $plugin The plugin that provides the type (Author.Plugin), '' for the general types (NumenCode.Bricks'
-     *                       base set, the theme's own types and callbacks); the "Add brick" list groups the types by it
+     * @param string $plugin The plugin that provides the type (Author.Plugin), FieldBuilder::THEME_SECTION . <theme> for
+     *                       a theme's own types, '' for the general types (NumenCode.Bricks' base set and callbacks
+     *                       without an owner); the "Add brick" list groups the types by it
      */
     public function __construct(
         public readonly string $code,

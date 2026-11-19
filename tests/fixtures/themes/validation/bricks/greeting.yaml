@@ -1,0 +1,6 @@
+name: Greeting
+component: NumenCode\Bricks\Tests\Fixtures\Components\Greeting
+titleFrom: nope
+fields:
+    mood:
+        label: Mood
