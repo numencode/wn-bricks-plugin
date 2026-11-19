@@ -967,7 +967,42 @@
         });
     });
 
+    //
+    // Read-only code editors: bricks of types the user may not edit get readOnly fields, but Winter's Monaco code
+    // editor ignores its data-read-only option (it stays editable; the server still rejects the change on save).
+    //
+
+    var READ_ONLY_EDITORS = '[data-bricks] [data-control="codeeditor"][data-read-only="true"]';
+
+    function lockEditor(widget) {
+        var editor = widget && widget.getEditor ? widget.getEditor() : null;
+
+        if (editor && widget.element && $(widget.element).is(READ_ONLY_EDITORS)) {
+            editor.updateOptions({ readOnly: true });
+        }
+    }
+
+    // Editors are created when they become visible, so also after this script ran
+    if (window.Snowboard) {
+        window.Snowboard.addPlugin('numencode.bricks.readOnlyEditors', class extends window.Snowboard.Singleton {
+            listens() {
+                return { 'backend.formwidget.codeeditor.create': 'onCreate' };
+            }
+
+            onCreate(widget) {
+                lockEditor(widget);
+            }
+        });
+    }
+
+    function lockEditors() {
+        $(READ_ONLY_EDITORS).each(function () {
+            lockEditor($(this).data('oc.codeEditor'));
+        });
+    }
+
     function update() {
+        lockEditors();
         patchRepeater();
         processPalettes();
         refreshTitles();
