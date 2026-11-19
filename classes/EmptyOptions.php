@@ -31,48 +31,35 @@ class EmptyOptions
     }
 
     /**
-     * Drops the empty options from the bricks of all the page's bricks fields, in every language.
+     * Drops the empty options from the bricks of all bricks fields of a static page or model, in every language.
+     *
+     * @param Page|BrickHost $host
      */
-    public static function clean(Page $page): void
+    public static function clean(object $host): void
     {
-        $fields = BrickRenderer::fieldNames($page);
+        $host = BrickHost::of($host);
 
-        if (!$fields) {
-            return;
-        }
+        foreach ($host->fields() as $field) {
+            $bricks = $host->current($field);
 
-        $viewBag = (array) ($page->attributes['viewBag'] ?? []);
+            if ($bricks) {
+                $cleaned = static::bricks($bricks);
 
-        foreach ($fields as $field) {
-            if (isset($viewBag[$field]) && is_array($viewBag[$field])) {
-                $viewBag[$field] = static::bricks($viewBag[$field]);
+                if ($cleaned !== $bricks) {
+                    $host->setCurrent($field, $cleaned);
+                }
             }
-        }
 
-        $page->attributes['viewBag'] = $viewBag;
-
-        if (!$page->isClassExtendedWith('Winter.Translate.Behaviors.TranslatableCmsObject')) {
-            return;
-        }
-
-        $default = \Winter\Translate\Classes\Translator::instance()->getDefaultLocale();
-
-        foreach (array_keys(\Winter\Translate\Models\Locale::listEnabled()) as $locale) {
-            if ($locale === $default) {
+            if (!$host->isTranslatable($field)) {
                 continue;
             }
 
-            $translated = (array) ($page->getTranslateAttributes($locale)['viewBag'] ?? []);
+            foreach ($host->otherLocales() as $locale) {
+                $translated = $host->translated($field, $locale);
+                $cleaned = static::bricks($translated);
 
-            foreach ($fields as $field) {
-                if (!isset($translated[$field]) || !is_array($translated[$field])) {
-                    continue;
-                }
-
-                $cleaned = static::bricks($translated[$field]);
-
-                if ($cleaned !== $translated[$field]) {
-                    $page->setAttributeTranslated('viewBag[' . $field . ']', $cleaned, $locale);
+                if ($translated && $cleaned !== $translated) {
+                    $host->setTranslated($field, $cleaned, $locale);
                 }
             }
         }

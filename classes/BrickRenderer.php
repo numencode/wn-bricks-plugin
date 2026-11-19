@@ -15,7 +15,9 @@ use Winter\Pages\Classes\Page;
  * Renders bricks on the frontend.
  *
  * Markup of a brick: the theme partial bricks/<code>.htm, else the type's own <code>.htm, rendered with the brick's
- * values plus `brick` = {code, index, field}. Component bricks render their component (added by ComponentBricks).
+ * values plus `brick` = {code, index, field}. Component bricks render their component: the one ComponentBricks added
+ * to the page for a static page's field, else one created while rendering (e.g. a blog post's bricks:
+ * renderBricks(post.bricks, 'post')) – its onRun() runs then, but its AJAX handlers can't be reached.
  * Bricks of unknown types are skipped (a warning is logged in debug mode).
  */
 class BrickRenderer
@@ -27,17 +29,25 @@ class BrickRenderer
      */
     protected static array $fieldNames = [];
 
+    /**
+     * Components created while rendering, per controller: alias => true.
+     *
+     * @var \WeakMap<Controller, array<string, bool>>|null
+     */
+    protected static ?\WeakMap $created = null;
+
     public function __construct(protected Controller $controller)
     {
     }
 
     /**
      * Twig: renderBricks() / renderBricks('aside') renders a bricks field of the current static page;
-     * renderBricks(list) renders a list (component bricks only when it is the page's "bricks" field).
+     * renderBricks(list) / renderBricks(list, 'name') renders a list, e.g. a model's (renderBricks(post.bricks, 'post'));
+     * the name keeps its component bricks apart from the page's own ("bricks" = the page's field).
      *
      * @param string|array<int, array<string, mixed>>|null $bricks
      */
-    public static function renderBricksFunction(string|array|null $bricks = null): string
+    public static function renderBricksFunction(string|array|null $bricks = null, ?string $name = null): string
     {
         if (!$controller = Controller::getController()) {
             return '';
@@ -46,7 +56,7 @@ class BrickRenderer
         $renderer = new static($controller);
 
         return is_array($bricks)
-            ? $renderer->renderList($bricks)
+            ? $renderer->renderList($bricks, $name ?? self::DEFAULT_FIELD)
             : $renderer->renderField($bricks ?? self::DEFAULT_FIELD);
     }
 
@@ -174,7 +184,7 @@ class BrickRenderer
         $class = static::cssClass($brick[FieldBuilder::CLASS_FIELD] ?? '');
 
         if ($type->isComponent()) {
-            $html = $this->renderComponent(ComponentBricks::alias($field, $index));
+            $html = $this->renderComponent(ComponentBricks::alias($field, $index), $type, $brick);
 
             // The component's markup can't use them, so a wrapper carries the anchor and CSS class (only when set)
             return ($anchor === '' && $class === '') || trim($html) === '' ? $html : sprintf(
@@ -237,13 +247,42 @@ class BrickRenderer
         return static::$fieldNames[$key];
     }
 
-    protected function renderComponent(string $alias): string
+    /**
+     * The page's component of a static page's component brick, else a component created now (lists of bricks from
+     * elsewhere, e.g. a model). A created component gets a free alias (a list rendered twice, or one per post in a
+     * loop, doesn't reuse another one's component) and its onRun() runs before it is rendered.
+     *
+     * @param array<string, mixed> $brick
+     */
+    protected function renderComponent(string $alias, BrickType $type, array $brick): string
     {
-        if (!$this->controller->findComponentByName($alias)) {
-            $this->warn(sprintf('component brick "%s" is not on the page (only page fields can render component bricks)', $alias));
+        static::$created ??= new \WeakMap();
+        $created = static::$created[$this->controller] ?? [];
+        $class = ltrim((string) $type->component, '\\');
+        $component = $this->controller->findComponentByName($alias);
+
+        if ($component && !isset($created[$alias]) && ltrim(get_class($component), '\\') === $class) {
+            return (string) $this->controller->renderComponent($alias);
+        }
+
+        $base = $alias;
+
+        for ($n = 2; $this->controller->findComponentByName($alias) || isset($created[$alias]); $n++) {
+            $alias = $base . '_' . $n;
+        }
+
+        try {
+            $properties = array_diff_key($brick, array_flip(BrickType::RESERVED_FIELDS));
+            $component = $this->controller->addComponent($class, $alias, $properties, true);
+        } catch (\Throwable $exception) {
+            $this->warn(sprintf('component brick "%s" (%s) could not be created: %s', $alias, $class, $exception->getMessage()));
 
             return '';
         }
+
+        $created[$alias] = true;
+        static::$created[$this->controller] = $created;
+        $component->onRun();
 
         return (string) $this->controller->renderComponent($alias);
     }

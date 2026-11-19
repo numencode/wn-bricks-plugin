@@ -1,0 +1,5 @@
+url = "/listed"
+==
+{% set list = [{'_group': 'greeting', 'name': 'Ana'}, {'_group': 'text', 'content': '<p>Hi</p>'}] %}
+<one>{{ renderBricks(list, 'post') }}</one>
+<two>{{ renderBricks(list, 'post') }}</two>

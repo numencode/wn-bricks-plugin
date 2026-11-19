@@ -54,5 +54,8 @@ The first release.
     bricks, headings, images and dividers into their bricks, the rest into text bricks; the old content is kept
   - `bricks:clear-markup` removes the old content of converted pages once they are checked
 - `BrickRegistry::sources()` lists every definition of each brick code, also the replaced ones.
+- **Bricks on any model:** a `type: bricks` field in a model's form (a jsonable attribute; translatable with
+  Winter.Translate's TranslatableModel), with the same editor, permission check and cleanup as on static pages.
+  `renderBricks(list, 'name')` renders a model's bricks; their component bricks are created while rendering.
 
 [Unreleased]: https://github.com/numencode/wn-bricks-plugin/commits/main

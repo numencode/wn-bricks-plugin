@@ -37,6 +37,7 @@ class PagesIntegration
         Event::listen('backend.form.extendFieldsBefore', [static::class, 'movePreview'], PHP_INT_MIN);
         Event::listen('cms.page.initComponents', [ComponentBricks::class, 'addComponents']);
         BrickDuplicator::register();
+        ModelIntegration::register();
 
         if (class_exists(Page::class)) {
             PermissionGuard::register();
@@ -176,12 +177,18 @@ class PagesIntegration
      * permissions for. All other types stay in the repeater (hidden, read-only without the permission), so
      * existing bricks of those types keep their values when the page is saved.
      *
+     * Used for static pages and for models (ModelIntegration): $host is where the fields are stored. A static page's
+     * fields are made translatable here; a model's are translatable when the model declares them.
+     *
      * @param array<string, array<string, mixed>> $fields
+     * @param Page|BrickHost $host
+     * @param bool $translatable Whether Winter.Translate is installed
      * @return array<string, array<string, mixed>>
      * @throws SystemException When the field's allow/ignore leave no brick types
      */
-    public static function replaceFields(array $fields, Page $page, ?Theme $theme, bool $translatable, ?User $user = null): array
+    public static function replaceFields(array $fields, object $host, ?Theme $theme, bool $translatable, ?User $user = null): array
     {
+        $host = BrickHost::of($host, []);
         $registry = BrickRegistry::instance();
         $all = $registry->all($theme);
         $denied = array_keys(array_filter($all, fn (BrickType $type) => !$type->isAllowedFor($user)));
@@ -203,12 +210,14 @@ class PagesIntegration
 
             $offered = array_diff_key($types, array_flip($denied));
             // Stored bricks whose type no longer exists keep their content (hidden in "Add brick", like $all's rest)
-            $known = $all + UnknownBricks::types($page, (string) $name, $all);
-            $client = $translatable ? ['locales' => static::localeConfig()] : [];
+            $known = $all + UnknownBricks::types($host, (string) $name, $all);
+            $key = $host->key((string) $name) ?? (string) $name;
+            $fieldTranslatable = $translatable && ($host instanceof PageHost || $host->isTranslatable($key));
+            $client = $fieldTranslatable ? ['locales' => static::localeConfig()] : [];
             $fields[$name] = FieldBuilder::field($config, $offered, $known, $denied, $client);
 
-            if ($translatable && !in_array($name, $page->translatable, true)) {
-                $page->translatable[] = $name;
+            if ($fieldTranslatable) {
+                $host->makeTranslatable($key);
             }
         }
 

@@ -27,15 +27,16 @@ class UnknownBricks
     /**
      * Brick types for the missing types among a field's stored bricks.
      *
-     * @param string $field The form field name, e.g. viewBag[bricks]
+     * @param Page|BrickHost $host
+     * @param string $field The form field name, e.g. viewBag[bricks] (a static page) or bricks (a model)
      * @param array<string, BrickType> $known
      * @return array<string, BrickType>
      */
-    public static function types(Page $page, string $field, array $known): array
+    public static function types(object $host, string $field, array $known): array
     {
         $types = [];
 
-        foreach (static::storedKeys($page, $field) as $code => $keys) {
+        foreach (static::storedKeys($host, $field) as $code => $keys) {
             if (!isset($known[$code])) {
                 $types[$code] = static::type((string) $code, $keys);
             }
@@ -47,18 +48,24 @@ class UnknownBricks
     /**
      * The value keys of a field's stored bricks per type code, from every locale.
      *
+     * @param Page|BrickHost $host
      * @return array<string, array<int, string>>
      */
-    public static function storedKeys(Page $page, string $field): array
+    public static function storedKeys(object $host, string $field): array
     {
-        if (!preg_match('/^viewBag\[([^\]]+)\]$/', $field, $match)) {
+        $host = BrickHost::of($host, []);
+        $key = $host->key($field);
+
+        if ($key === null) {
             return [];
         }
 
         $keys = [];
+        $host = BrickHost::of($host->model, [$key]);
+        [$saved, $stored] = $host->versions();
 
-        foreach (PermissionGuard::viewBags($page) as $viewBag) {
-            foreach ((array) ($viewBag[$match[1]] ?? []) as $brick) {
+        foreach (array_merge($saved, $stored) as $lists) {
+            foreach ($lists[$key] ?? [] as $brick) {
                 if (!is_array($brick) || !is_string($code = $brick['_group'] ?? null) || $code === '') {
                     continue;
                 }

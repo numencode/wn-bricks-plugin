@@ -17,6 +17,7 @@ plugins or themes, and themes can override every brick's markup.
   with plain, semantic markup.
 - **Your own brick types** – a YAML file with standard backend form fields plus a Twig file, in a plugin or a theme.
 - **Theme overrides** – a theme can replace the markup (`partials/bricks/<code>.htm`) or the fields of any brick type.
+- **Bricks on any model** – a `type: bricks` form field stores bricks in a model's attribute, e.g. on blog posts.
 - **Component bricks** – CMS components become bricks, with fields generated from their properties. Every Winter.Pages
   snippet component (e.g. [NumenCode.Widgets](https://github.com/numencode/wn-widgets-plugin)) is a brick
   automatically.
@@ -345,11 +346,50 @@ A component brick's markup is the component's own; with an anchor or CSS class i
 |---|---|
 | `{{ renderBricks() }}` | The current static page's `bricks` field. |
 | `{{ renderBricks('aside') }}` | Another bricks field of the page. |
-| `{{ renderBricks(list) }}` | A list of bricks (no component bricks; they need to be on the page). |
+| `{{ renderBricks(list, 'name') }}` | A list of bricks from elsewhere, e.g. a model's: `renderBricks(post.bricks, 'post')`. The name keeps its component bricks apart from the page's. |
 | `{{ renderBrick(brick, index, field) }}` | One brick, e.g. in `{% for brick in bricks %}{{ renderBrick(brick, loop.index0) }}{% endfor %}`. |
 | `{{ url\|bricksVideoUrl }}` | The embed URL of a YouTube (youtube-nocookie.com) or Vimeo video, or empty. |
 
 Hidden bricks and bricks of unknown types are not rendered (an unknown type is logged in debug mode).
+
+Component bricks of a static page's fields are added to the page before it runs, so their AJAX handlers work. Component
+bricks of other lists (e.g. a model's) are created while rendering: their `onRun()` runs, but their AJAX handlers can't
+be reached.
+
+## Bricks on other models
+
+Any model can have bricks fields, e.g. blog posts ([NumenCode.BlogExtension](https://github.com/numencode/wn-blogextension-plugin)
+adds them to Winter.Blog posts). Store the bricks in a jsonable text attribute and use `type: bricks` in the form:
+
+```php
+class Project extends Model
+{
+    public $implement = ['@Winter.Translate.Behaviors.TranslatableModel'];
+
+    public $translatable = ['title', 'bricks'];   // one list of bricks per language (optional)
+
+    protected $jsonable = ['bricks'];              // a (medium)text column
+}
+```
+
+```yaml
+# fields.yaml
+tabs:
+    fields:
+        bricks:
+            tab: Content
+            type: bricks
+            allow: text, image, gallery   # optional, like the layout tag
+```
+
+```twig
+{{ renderBricks(project.bricks, 'project') }}
+```
+
+The field offers the active theme's brick types and works like on static pages: "Add brick", the editor's actions,
+permissions checked on save, empty options dropped, bricks of missing types kept. With Winter.Translate, list the
+attribute in `$translatable` to get one list per language with "copy from"; Winter.Pages' preview tab is only on
+static pages.
 
 ## Translations
 
@@ -397,6 +437,16 @@ bricks[2][_group] = "spacer"
 
 The pages stay theme files: deploy them as before. Bricks need no cache of their own: Winter caches the parsed YAML
 definitions by their modification time.
+
+## Roadmap
+
+Planned before the first release (1.0.0):
+
+- **Shared brick structure with per-field translations** (opt-in per field, e.g.
+  `{variable type="bricks" translation="fields"}`): one list of bricks, arranged in the default language; other
+  languages translate the text fields, and an untranslated field shows the default language's value.
+- **Bricks inside bricks:** a bricks field inside a brick type. The Columns brick will hold a list of bricks per
+  column.
 
 ## Changelog
 

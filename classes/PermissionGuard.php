@@ -12,11 +12,12 @@ use Winter\Pages\Classes\Page;
 use Winter\Storm\Exception\ValidationException;
 
 /**
- * Server-side check of brick type permissions (e.g. numencode.bricks.use_html) when a static page is saved.
+ * Server-side check of brick type permissions (e.g. numencode.bricks.use_html) when a static page or a model with
+ * bricks fields (ModelIntegration) is saved.
  *
  * The backend form only hides the types a user lacks the permission for and makes their fields read-only; the
  * browser can still send anything. So on save, every brick of such a type (in every language) must be identical to
- * a brick of that type already stored on the page, in any language. Moving, removing and copying stored bricks
+ * a brick of that type already stored in that record, in any language. Moving, removing and copying stored bricks
  * (e.g. copying a translation) stay allowed; adding a new one or changing one is rejected.
  *
  * Only saves by a backend user are checked; console commands and other code without a backend user are not.
@@ -38,9 +39,10 @@ class PermissionGuard
     }
 
     /**
+     * @param Page|BrickHost $host A static page (its layout's bricks fields) or a model's bricks fields
      * @throws ValidationException When the user added or changed a brick of a type they lack the permissions for
      */
-    public static function check(Page $page, ?User $user, ?Theme $theme = null): void
+    public static function check(object $host, ?User $user, ?Theme $theme = null): void
     {
         if (!$user) {
             return;
@@ -51,25 +53,25 @@ class PermissionGuard
             fn (BrickType $type) => !$type->isAllowedFor($user),
         );
 
-        $fields = $denied ? BrickRenderer::fieldNames($page) : [];
+        $host = BrickHost::of($host);
 
-        if (!$fields) {
+        if (!$denied || !$host->fields()) {
             return;
         }
 
-        [$saved, $stored] = static::versions($page);
+        [$saved, $stored] = $host->versions();
         $allowed = [];
 
-        foreach ($stored as $viewBag) {
-            foreach (static::bricksOf($viewBag, $fields, $denied) as $brick) {
+        foreach ($stored as $lists) {
+            foreach (static::bricksOf($lists, $denied) as $brick) {
                 $allowed[static::fingerprint($brick)] = true;
             }
         }
 
-        foreach ($saved as $viewBag) {
-            foreach (static::bricksOf($viewBag, $fields, $denied) as $field => $brick) {
+        foreach ($saved as $lists) {
+            foreach (static::bricksOf($lists, $denied) as $field => $brick) {
                 if (!isset($allowed[static::fingerprint($brick)])) {
-                    throw new ValidationException(['viewBag[' . $field . ']' => Lang::get(
+                    throw new ValidationException([$host->formName((string) $field) => Lang::get(
                         'numencode.bricks::lang.permissions.denied',
                         ['type' => $denied[$brick['_group']]->label()],
                     )]);
@@ -79,59 +81,16 @@ class PermissionGuard
     }
 
     /**
-     * The viewBag to be saved and the stored one, of the default language and (with Winter.Translate) of every
-     * other enabled language.
+     * The bricks of the denied types in lists of bricks (field => bricks), as [field, brick] pairs.
      *
-     * @return array{0: array<int, array<string, mixed>>, 1: array<int, array<string, mixed>>}
-     */
-    /**
-     * All viewBags of the page: the current and the stored one, of the default locale and every other enabled locale.
-     *
-     * @return array<int, array<string, mixed>>
-     */
-    public static function viewBags(Page $page): array
-    {
-        [$saved, $stored] = static::versions($page);
-
-        return array_merge($saved, $stored);
-    }
-
-    protected static function versions(Page $page): array
-    {
-        $saved = [(array) ($page->attributes['viewBag'] ?? [])];
-        $stored = [$page->exists ? (array) $page->getOriginal('viewBag') : []];
-
-        if (!$page->isClassExtendedWith('Winter.Translate.Behaviors.TranslatableCmsObject')) {
-            return [$saved, $stored];
-        }
-
-        $default = \Winter\Translate\Classes\Translator::instance()->getDefaultLocale();
-
-        foreach (array_keys(\Winter\Translate\Models\Locale::listEnabled()) as $locale) {
-            if ($locale === $default) {
-                continue;
-            }
-
-            // Loads the stored translation first, when it isn't loaded yet (then both are the stored version)
-            $saved[] = (array) ($page->getTranslateAttributes($locale)['viewBag'] ?? []);
-            $stored[] = (array) ($page->getTranslatableOriginals($locale)['viewBag'] ?? []);
-        }
-
-        return [$saved, $stored];
-    }
-
-    /**
-     * The bricks of the denied types in the given fields of a viewBag, as [field, brick] pairs.
-     *
-     * @param array<string, mixed> $viewBag
-     * @param array<int, string> $fields
+     * @param array<string, array<int|string, mixed>> $lists
      * @param array<string, BrickType> $denied
      * @return \Generator<string, array<string, mixed>>
      */
-    protected static function bricksOf(array $viewBag, array $fields, array $denied): \Generator
+    protected static function bricksOf(array $lists, array $denied): \Generator
     {
-        foreach ($fields as $field) {
-            foreach ((array) ($viewBag[$field] ?? []) as $brick) {
+        foreach ($lists as $field => $bricks) {
+            foreach ($bricks as $brick) {
                 if (is_array($brick) && isset($denied[$brick['_group'] ?? ''])) {
                     yield $field => $brick;
                 }
