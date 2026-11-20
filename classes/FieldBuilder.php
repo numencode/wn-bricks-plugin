@@ -96,17 +96,18 @@ class FieldBuilder
                 $fields[$name] = static::nestedField($config, $types, $readOnly, $depth + 1, $isReadOnly);
             }
 
+            // Items with translatable fields keep their id (a shared structure translates them per item)
+            foreach (array_keys($type->translatableItems()) as $name) {
+                $fields[$name]['form']['fields'][self::ID_FIELD] = static::idField();
+            }
+
             $fields += static::advancedFields();
             $fields[self::HIDDEN_FIELD] = [
                 'type'     => 'partial',
                 'path'     => '$/numencode/bricks/classes/fieldbuilder/_hidden.php',
                 'cssClass' => 'bricks-hidden-flag',
             ];
-            $fields[self::ID_FIELD] = [
-                'type'     => 'partial',
-                'path'     => '$/numencode/bricks/classes/fieldbuilder/_id.php',
-                'cssClass' => 'bricks-id',
-            ];
+            $fields[self::ID_FIELD] = static::idField();
 
             $groups[$code] = [
                 'name'        => $type->name,
@@ -175,6 +176,20 @@ class FieldBuilder
     public static function maxDepth(): int
     {
         return max(1, (int) \Config::get('numencode.bricks::max_depth', self::DEFAULT_MAX_DEPTH));
+    }
+
+    /**
+     * The hidden field posting a brick's (or a translatable repeater item's) id back.
+     *
+     * @return array<string, mixed>
+     */
+    public static function idField(): array
+    {
+        return [
+            'type'     => 'partial',
+            'path'     => '$/numencode/bricks/classes/fieldbuilder/_id.php',
+            'cssClass' => 'bricks-id',
+        ];
     }
 
     /**

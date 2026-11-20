@@ -176,22 +176,33 @@
         return $input.length ? $input.val() : '';
     }
 
-    function itemSummary($item, titleFrom) {
+    // The summary of a brick: {text, muted}. A shared structure in another language: an untranslated field gives the
+    // default language's text (data-bricks-default, SharedBricks), muted.
+    function summaryOf($item, titleFrom) {
         // Without the anchor and CSS class ("Advanced")
         var $fields = ownFields($item).not('.bricks-advanced'),
-            text = '';
+            summary = null;
+
+        function take($field) {
+            var text = shorten(fieldText($field)),
+                fallback = shorten(String($field.attr('data-bricks-default') || ''));
+
+            return text ? {text: text, muted: false} : (fallback ? {text: fallback, muted: true} : null);
+        }
 
         if (titleFrom) {
-            text = shorten(fieldText($fields.filter('[data-field-name="' + titleFrom + '"]').first()));
+            summary = take($fields.filter('[data-field-name="' + titleFrom + '"]').first());
         }
 
         $fields.each(function () {
-            if (!text) {
-                text = shorten(fieldText($(this)));
-            }
+            summary = summary || take($(this));
         });
 
-        return text;
+        return summary || {text: '', muted: false};
+    }
+
+    function itemSummary($item, titleFrom) {
+        return summaryOf($item, titleFrom).text;
     }
 
     function patchRepeater() {
@@ -229,12 +240,13 @@
             $container = bricksContainer(repeater.$el);
 
         if (!$container.length) {
-            return {type: type, summary: ''};
+            return {type: type, summary: '', muted: false};
         }
 
-        var code = hiddenGroupInput($item).val();
+        var code = hiddenGroupInput($item).val(),
+            summary = summaryOf($item, (config($container).titleFrom || {})[code]);
 
-        return {type: type, summary: itemSummary($item, (config($container).titleFrom || {})[code])};
+        return {type: type, summary: summary.text, muted: summary.muted};
     }
 
     // Built from text nodes, so content is never rendered as HTML
@@ -244,7 +256,10 @@
 
         $('<strong class="bricks-title-type">').text(parts.type).appendTo($title);
 
-        if (parts.summary) {
+        if (parts.summary && parts.muted) {
+            $title.append(document.createTextNode(': '));
+            $('<span class="bricks-title-default">').text(parts.summary).appendTo($title);
+        } else if (parts.summary) {
             $title.append(document.createTextNode(': ' + parts.summary));
         }
     }

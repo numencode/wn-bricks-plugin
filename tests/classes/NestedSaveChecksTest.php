@@ -161,11 +161,12 @@ class NestedSaveChecksTest extends BricksTestCase
     {
         $copy = BrickDuplicator::withoutIds(['_group' => 'box', '_id' => 'b1', 'inner' => [
             ['_group' => 'text', '_id' => 't1', 'content' => 'A'],
-        ], 'images' => [['image' => 'a.jpg', '_id' => 'not a brick']]]);
+        ], 'images' => [['image' => 'a.jpg', '_id' => 'i1']]]);
 
         $this->assertArrayNotHasKey('_id', $copy);
         $this->assertArrayNotHasKey('_id', $copy['inner'][0]);
         $this->assertSame('A', $copy['inner'][0]['content']);
-        $this->assertSame('not a brick', $copy['images'][0]['_id'], 'only bricks (values with a type)');
+        $this->assertArrayNotHasKey('_id', $copy['images'][0], 'repeater items lose theirs too');
+        $this->assertSame('a.jpg', $copy['images'][0]['image']);
     }
 }

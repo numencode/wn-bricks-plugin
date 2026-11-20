@@ -14,6 +14,9 @@ use Winter\Pages\Classes\Page;
  * language: bricks without one get a new id, and a repeated id (e.g. a brick duplicated in the browser) is replaced in
  * all but its first brick. Duplicated and pasted bricks lose their id in the editor (BrickDuplicator), so they get a
  * new one on save.
+ *
+ * The items of a brick's repeaters with translatable fields (BrickType::translatableItems(), e.g. the gallery's images)
+ * get ids too, unique in the same tree: a shared structure translates them per item.
  */
 class BrickIds
 {
@@ -99,6 +102,34 @@ class BrickIds
     }
 
     /**
+     * @param array<int|string, mixed> $items
+     * @param array<string, bool> $seen
+     * @return array<int|string, mixed>
+     */
+    protected static function assignItemIds(array $items, array &$seen): array
+    {
+        foreach ($items as $index => $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+
+            $id = $item[FieldBuilder::ID_FIELD] ?? null;
+
+            if (!static::isValid($id) || isset($seen[$id])) {
+                do {
+                    $id = static::generate();
+                } while (isset($seen[$id]));
+
+                $items[$index][FieldBuilder::ID_FIELD] = $id;
+            }
+
+            $seen[$id] = true;
+        }
+
+        return $items;
+    }
+
+    /**
      * @param array<int|string, mixed> $bricks
      * @param array<string, BrickType> $types
      * @param array<string, bool> $seen The ids given so far (in the whole tree)
@@ -122,6 +153,14 @@ class BrickIds
             }
 
             $seen[$id] = true;
+            $type = $types[(string) ($brick['_group'] ?? '')] ?? null;
+
+            // The items of repeaters with translatable fields (e.g. the gallery's images)
+            foreach (array_keys($type?->translatableItems() ?? []) as $name) {
+                if (is_array($brick[$name] ?? null)) {
+                    $brick[$name] = static::assignItemIds($brick[$name], $seen);
+                }
+            }
 
             foreach (BrickTree::children($brick, $types) as $name => $list) {
                 $brick[$name] = static::assignIds($list, $types, $seen);

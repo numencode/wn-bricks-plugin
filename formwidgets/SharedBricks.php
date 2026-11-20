@@ -35,6 +35,10 @@ use Winter\Storm\Html\Helper as HtmlHelper;
  * becomes a SharedBricks "driven by its parent" (config NESTED_OPTION: the default language's bricks of that list and
  * the language's name): locked like the parent, with the same per-field placeholders, without language buttons or
  * lockers of its own; the parent extracts the translations of the whole tree from the posted items.
+ *
+ * A brick's repeater whose items have translatable fields (e.g. the gallery's images with their captions) is shown the
+ * same way while translating: a nested SharedBricks in form mode (NESTED_OPTION "key": "<code>.<repeater field>",
+ * see SharedTranslations::translatableOf()), its items locked, their translatable fields editable.
  */
 class SharedBricks extends Repeater
 {
@@ -58,8 +62,9 @@ class SharedBricks extends Repeater
     protected const KEPT_FIELDS = [FieldBuilder::ID_FIELD, UnknownBricks::NOTICE_FIELD];
 
     /**
-     * The config of a nested list while translating: ['structure' => the default language's bricks, 'locale' => the
-     * default language's name].
+     * The config of a nested list while translating: ['structure' => the default language's bricks (or items),
+     * 'locale' => the default language's name]; for a repeater's items also 'key' (their translatable fields' key) and
+     * 'fields' (those fields).
      */
     public const NESTED_OPTION = 'bricksNested';
 
@@ -107,7 +112,9 @@ class SharedBricks extends Repeater
             // The default language's bricks of this list; the values shown come from the parent brick's form data
             $this->nested = $nested;
             $this->structure = array_values(array_filter((array) ($nested['structure'] ?? []), 'is_array'));
-            $this->translatable = SharedTranslations::translatableByGroup((array) $this->getConfig('groups', []));
+            $this->translatable = isset($nested['key'])
+                ? [(string) $nested['key'] => array_map('strval', (array) ($nested['fields'] ?? []))]
+                : SharedTranslations::translatableByGroup((array) $this->getConfig('groups', []));
         } else {
             $this->initLocales();
         }
@@ -277,20 +284,33 @@ class SharedBricks extends Repeater
             }
 
             $id = (string) ($brick[FieldBuilder::ID_FIELD] ?? '');
+            $code = (string) ($brick['_group'] ?? '');
             $selected = $inTarget || $target === self::TRANSLATE_ALL || $target === $id;
+            // The brick, and the items of its repeaters with translatable fields
+            $units = [[$brick, $this->translatable[$code] ?? []]];
 
-            foreach ($selected ? $this->translatable[(string) ($brick['_group'] ?? '')] ?? [] : [] as $field) {
-                $value = $brick[$field] ?? null;
-
-                if (!is_string($value) || SharedTranslations::isEmpty($value)) {
-                    continue;
+            foreach (SharedTranslations::itemLists($brick) as $name => $items) {
+                foreach ($items as $item) {
+                    $units[] = [$item, $this->translatable[$code . SharedTranslations::ITEM_SEPARATOR . $name] ?? []];
                 }
+            }
 
-                if ($target === self::TRANSLATE_ALL && !SharedTranslations::isEmpty($map[$id][$field] ?? null)) {
-                    continue;
+            foreach ($selected ? $units : [] as [$unit, $fields]) {
+                $unitId = (string) ($unit[FieldBuilder::ID_FIELD] ?? '');
+
+                foreach (BrickIds::isValid($unitId) ? $fields : [] as $field) {
+                    $value = $unit[$field] ?? null;
+
+                    if (!is_string($value) || SharedTranslations::isEmpty($value)) {
+                        continue;
+                    }
+
+                    if ($target === self::TRANSLATE_ALL && !SharedTranslations::isEmpty($map[$unitId][$field] ?? null)) {
+                        continue;
+                    }
+
+                    $sources[] = [$unitId, $field, $value];
                 }
-
-                $sources[] = [$id, $field, $value];
             }
 
             foreach (SharedTranslations::nestedLists($brick) as $list) {
@@ -389,7 +409,10 @@ class SharedBricks extends Repeater
     {
         parent::processGroupMode();
 
-        $this->translatable = SharedTranslations::translatableByGroup((array) $this->groupDefinitions);
+        // A repeater's items (form mode) keep the fields given by the parent brick
+        if ($this->useGroups) {
+            $this->translatable = SharedTranslations::translatableByGroup((array) $this->groupDefinitions);
+        }
     }
 
     /**
@@ -397,6 +420,19 @@ class SharedBricks extends Repeater
      */
     protected function makeItemFormWidget($index = 0, $groupCode = null)
     {
+        // A repeater's items (form mode)
+        if ($this->nested !== null && isset($this->nested['key']) && !$this->useGroups) {
+            $form = $this->form;
+            $fields = (array) ($this->makeConfig($form)->fields ?? []);
+            $this->form = ['fields' => $this->translationFields($fields, (string) $this->nested['key'], $this->structureBrick($index))];
+
+            try {
+                return parent::makeItemFormWidget($index, $groupCode);
+            } finally {
+                $this->form = $form;
+            }
+        }
+
         if (!$this->isTranslating() || !$groupCode || !isset($this->groupDefinitions[$groupCode])) {
             return parent::makeItemFormWidget($index, $groupCode);
         }
@@ -453,7 +489,7 @@ class SharedBricks extends Repeater
     {
         $translatable = $this->translatable[$groupCode] ?? [];
         $result = [];
-        $hasBricks = false;
+        $hasNested = false;
 
         foreach ($fields as $name => $config) {
             if (in_array($name, self::STRUCTURE_FIELDS, true)) {
@@ -462,8 +498,20 @@ class SharedBricks extends Repeater
 
             if (in_array($name, self::KEPT_FIELDS, true) || !is_array($config)) {
                 $result[$name] = $config;
+            } elseif ($itemFields = $this->translatable[$groupCode . SharedTranslations::ITEM_SEPARATOR . $name] ?? []) {
+                // A repeater whose items have translatable fields (e.g. the gallery's captions)
+                $hasNested = true;
+                $result[$name] = array_merge($config, [
+                    'type'              => FieldBuilder::SHARED_WIDGET,
+                    self::NESTED_OPTION => [
+                        'structure' => is_array($brick[$name] ?? null) ? array_values($brick[$name]) : [],
+                        'locale'    => $this->defaultLocaleName(),
+                        'key'       => $groupCode . SharedTranslations::ITEM_SEPARATOR . $name,
+                        'fields'    => $itemFields,
+                    ],
+                ]);
             } elseif (isset($config['containerAttributes']['data-bricks'])) {
-                $hasBricks = true;
+                $hasNested = true;
                 $result[$name] = array_merge($config, [
                     'type'              => FieldBuilder::SHARED_WIDGET,
                     self::NESTED_OPTION => [
@@ -478,7 +526,7 @@ class SharedBricks extends Repeater
             }
         }
 
-        if (!$translatable && !$hasBricks) {
+        if (!$translatable && !$hasNested && !str_contains($groupCode, SharedTranslations::ITEM_SEPARATOR)) {
             $result = ['_bricks_nothing' => [
                 'type'    => 'section',
                 'comment' => Lang::get('numencode.bricks::lang.shared.nothing'),
@@ -489,7 +537,8 @@ class SharedBricks extends Repeater
     }
 
     /**
-     * Shows the default value: as the placeholder of a text input, else below the field.
+     * Shows the default value: as the placeholder of a text input, else below the field (and, muted, in the collapsed
+     * brick's title while the field is empty).
      *
      * @param array<string, mixed> $config
      * @return array<string, mixed>
@@ -501,6 +550,11 @@ class SharedBricks extends Repeater
         }
 
         $text = trim(preg_replace('/\s+/u', ' ', html_entity_decode(strip_tags((string) $default), ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+
+        // A collapsed brick's title shows it (muted) while the field is empty (assets/js/bricks.js)
+        $config['containerAttributes'] = array_merge((array) ($config['containerAttributes'] ?? []), [
+            'data-bricks-default' => Str::limit($text, 200),
+        ]);
 
         if (in_array($config['type'] ?? 'text', ['text', 'textarea'], true)) {
             return ['placeholder' => $text] + $config;

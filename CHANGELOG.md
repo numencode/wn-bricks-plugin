@@ -36,7 +36,9 @@ The first release.
   other languages translate only the fields marked `translatable: true` (stored per brick id in
   `<field>_translations`), with fallback per field on the website, language buttons in the editor (structure locked,
   the default text as a placeholder), machine translation of all empty fields or one brick with Winter.Translate's
-  providers, and NumenCode.Fundamentals' language selector switching the field too.
+  providers, and NumenCode.Fundamentals' language selector switching the field too. Translatable fields inside a
+  brick's repeater (the gallery's alt texts and captions) are translated per item, and collapsed bricks show the
+  default text, greyed out, until they are translated.
 - **Editor:**
   - collapsed bricks show their type and a summary of their content
   - "Expand all" / "Collapse all"

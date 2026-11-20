@@ -335,7 +335,8 @@ class BrickRenderer
     }
 
     /**
-     * The translatable fields of every brick type (code => field names).
+     * The translatable fields of every brick type (SharedTranslations::translatableOf(): code => field names, also
+     * "<code>.<repeater>" => the repeater items' fields).
      *
      * @return array<string, array<int, string>>
      */
@@ -344,7 +345,7 @@ class BrickRenderer
         $fields = [];
 
         foreach (BrickRegistry::instance()->all($theme) as $code => $type) {
-            $fields[$code] = $type->isComponent() ? [] : SharedTranslations::translatableFields($type->fields);
+            $fields += $type->isComponent() ? [$code => []] : SharedTranslations::translatableOf((string) $code, $type->fields);
         }
 
         return $fields;

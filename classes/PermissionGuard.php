@@ -121,9 +121,11 @@ class PermissionGuard
 
         $result = [];
 
-        // A brick (also a nested one): its options aren't content
+        // A brick (also a nested one): its options aren't content; nor is a repeater item's id
         if (isset($value['_group'])) {
             $value = array_diff_key($value, array_flip(self::OPTION_KEYS));
+        } elseif (!array_is_list($value)) {
+            unset($value[FieldBuilder::ID_FIELD]);
         }
 
         foreach ($value as $key => $item) {

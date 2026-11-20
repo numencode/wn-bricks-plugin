@@ -155,6 +155,47 @@ class SharedTranslationsTest extends BricksTestCase
         $this->assertSame('', $editor[0]['inner'][0]['text'], 'untranslated nested fields are emptied in the editor too');
     }
 
+    public function testRepeaterItemsWithIdsAreTranslatedPerItem(): void
+    {
+        $fields = [
+            'images'  => ['type' => 'repeater', 'form' => ['fields' => [
+                'image'   => ['type' => 'mediafinder'],
+                'caption' => ['type' => 'text', 'translatable' => true],
+            ]]],
+            'columns' => ['type' => 'dropdown'],
+            'tabs'    => ['type' => 'repeater', 'groups' => []],
+        ];
+
+        $translatable = SharedTranslations::translatableOf('gallery', $fields);
+        $this->assertSame(['gallery' => [], 'gallery.images' => ['caption']], $translatable);
+
+        $structure = [['_group' => 'gallery', '_id' => 'g1', 'images' => [
+            ['image' => '/a.jpg', 'caption' => 'A', '_id' => 'i1'],
+            ['image' => '/b.jpg', 'caption' => 'B', '_id' => 'i2'],
+        ]]];
+
+        $this->assertSame(
+            ['i2' => ['caption' => 'Bé']],
+            SharedTranslations::extract([['_group' => 'gallery', '_id' => 'g1', 'images' => [
+                ['image' => '/x.jpg', 'caption' => '', '_id' => 'i1'],
+                ['image' => '/x.jpg', 'caption' => 'Bé', '_id' => 'i2'],
+            ]]], $translatable),
+        );
+        $this->assertSame(['i1' => ['caption' => 'Á']], SharedTranslations::clean(['i1' => ['caption' => 'Á', 'image' => '/x.jpg'], 'i9' => ['caption' => 'X']], $structure, $translatable));
+        $this->assertSame(['i1' => ['caption' => 'Á']], SharedTranslations::clean(['i1' => ['caption' => 'Á']], [['_group' => 'gone', '_id' => 'g1', 'images' => [['_id' => 'i1']]]], [], ['gone']), 'a missing type keeps its items\' translations');
+
+        // Reordered in the default language: each caption stays with its image
+        $merged = SharedTranslations::merge(array_map(fn ($b) => ['images' => array_reverse($b['images'])] + $b, $structure), ['i1' => ['caption' => 'Á']]);
+        $this->assertSame(['B', 'Á'], array_column($merged[0]['images'], 'caption'));
+        $this->assertSame('/a.jpg', $merged[0]['images'][1]['image']);
+
+        $editor = SharedTranslations::merge($structure, [], $translatable, false);
+        $this->assertSame(['', ''], array_column($editor[0]['images'], 'caption'));
+        $this->assertSame(['/a.jpg', '/b.jpg'], array_column($editor[0]['images'], 'image'));
+
+        $this->assertSame([], SharedTranslations::itemLists(['_group' => 'gallery', 'images' => [['caption' => 'no ids']]]));
+    }
+
     public function testNestedListsAreValuesHoldingBricks(): void
     {
         $this->assertSame(['inner', 'images'], array_keys(SharedTranslations::nestedLists($this->nestedStructure()[0])));

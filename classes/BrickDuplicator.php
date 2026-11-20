@@ -52,7 +52,7 @@ class BrickDuplicator
     }
 
     /**
-     * A brick without its id and the ids of the bricks inside it (any nested value with a "_group").
+     * A brick without its id and the ids of the bricks and repeater items inside it.
      *
      * @param array<string, mixed> $brick
      * @return array<string, mixed>
@@ -64,7 +64,7 @@ class BrickDuplicator
         foreach ($brick as $key => $value) {
             if (is_array($value)) {
                 $brick[$key] = array_map(
-                    fn ($item) => is_array($item) && isset($item['_group']) ? static::withoutIds($item) : $item,
+                    fn ($item) => is_array($item) && !array_is_list($item) ? static::withoutIds($item) : $item,
                     $value,
                 );
             }

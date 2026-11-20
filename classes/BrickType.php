@@ -187,6 +187,17 @@ final class BrickType
     }
 
     /**
+     * The repeaters whose items have translatable fields (e.g. the gallery's captions): field name => item field
+     * names. Their items get an id (FieldBuilder, BrickIds), so a shared structure translates them per item.
+     *
+     * @return array<string, array<int, string>>
+     */
+    public function translatableItems(): array
+    {
+        return $this->isComponent() ? [] : SharedTranslations::itemFields($this->fields);
+    }
+
+    /**
      * Whether bricks of this type hold other bricks (a nested bricks field, e.g. the columns of Columns).
      */
     public function isContainer(): bool

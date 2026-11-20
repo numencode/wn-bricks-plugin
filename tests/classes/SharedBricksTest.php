@@ -58,7 +58,7 @@ class SharedBricksTest extends BricksTestCase
     {
         $field = new FormField('viewBag[bricks]', 'Bricks');
         $field->value = $page->viewBag['bricks'] ?? null;
-        $offered = BrickRegistry::instance()->filter(['text', 'quote', 'spacer', 'box'], [], $this->theme);
+        $offered = BrickRegistry::instance()->filter(['text', 'quote', 'spacer', 'box', 'gallery'], [], $this->theme);
         // A brick type that no longer exists, as PagesIntegration adds it for stored bricks
         $config = FieldBuilder::field(
             ['type' => 'bricks', 'translation' => 'fields'],
@@ -151,6 +151,7 @@ class SharedBricksTest extends BricksTestCase
         $fields = $form->fields;
 
         $this->assertSame('Words', $fields['quote']['placeholder']);
+        $this->assertSame('Words', $fields['quote']['containerAttributes']['data-bricks-default'], 'for the collapsed title');
         $this->assertTrue($fields['author']['readOnly']);
         $this->assertArrayHasKey(FieldBuilder::ID_FIELD, $fields);
         $this->assertArrayNotHasKey(FieldBuilder::ANCHOR_FIELD, $fields);
@@ -370,6 +371,47 @@ class SharedBricksTest extends BricksTestCase
         $translations = $this->renderedTranslations($this->widget($this->page())->onTranslateBricks());
 
         $this->assertSame(['b1' => ['title' => '[sl from en] Box'], 'q1' => ['quote' => '[sl from en] Words']], $translations);
+    }
+
+    public function testGalleryCaptionsAreTranslatedPerImage(): void
+    {
+        $structure = [['_group' => 'gallery', '_id' => 'g1', 'columns' => '3', 'images' => [
+            ['image' => '/a.jpg', 'alt' => 'A', 'caption' => 'First', '_id' => 'i1'],
+            ['image' => '/b.jpg', 'alt' => 'B', 'caption' => 'Second', '_id' => 'i2'],
+        ]]];
+
+        $this->postForm([
+            'viewBag'                     => ['bricks' => [['_group' => 'gallery', '_id' => 'g1', 'images' => [
+                ['image' => '/changed.jpg', 'alt' => '', 'caption' => 'Prvi', '_id' => 'i1'],
+                ['image' => '/b.jpg', 'alt' => '', 'caption' => '', '_id' => 'i2'],
+            ]]]],
+            self::ALIAS . '_locale'       => 'sl',
+            self::ALIAS . '_structure'    => json_encode($structure),
+            self::ALIAS . '_translations' => ['sl' => '{}'],
+        ]);
+        $page = $this->page();
+        $widget = $this->widget($page);
+
+        $gallery = (new \ReflectionProperty(\Backend\FormWidgets\Repeater::class, 'formWidgets'))->getValue($widget)[0];
+        $images = $gallery->fields['images'];
+
+        $this->assertSame(FieldBuilder::SHARED_WIDGET, $images['type']);
+        $this->assertSame('gallery.images', $images[SharedBricks::NESTED_OPTION]['key']);
+        $this->assertArrayNotHasKey('_bricks_nothing', $gallery->fields);
+
+        $field = new FormField('viewBag[bricks][0][images]', 'Images');
+        $field->value = post('viewBag.bricks.0.images');
+        $nested = new SharedBricks($widget->getController(), $field, $images + ['model' => $page, 'alias' => 'images', 'parentForm' => $gallery]);
+        $item = (new \ReflectionMethod(SharedBricks::class, 'makeItemFormWidget'))->invoke($nested, 1);
+
+        $this->assertSame('Second', $item->fields['caption']['placeholder'], 'the default caption of this image');
+        $this->assertTrue($item->fields['image']['readOnly']);
+        $this->assertArrayHasKey(FieldBuilder::ID_FIELD, $item->fields);
+
+        $saved = $widget->getSaveValue(post('viewBag.bricks'));
+
+        $this->assertSame($structure, $saved);
+        $this->assertSame(['i1' => ['caption' => 'Prvi']], $page->getTranslateAttributes('sl')['viewBag']['bricks_translations']);
     }
 
     public function testWithoutAProviderNothingIsTranslated(): void

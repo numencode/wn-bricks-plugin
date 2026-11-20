@@ -482,9 +482,11 @@ bricks:
 - On models, render it with `renderBricks(post, 'bricks')`: a plain list (`post.bricks`) has no translations.
 
 Bricks inside bricks are part of the structure too: locked in other languages, their translatable fields translated
-like the others (the translate button of a container translates the bricks inside it as well). Only bricks have
-translatable fields: fields inside an ordinary repeater (e.g. the gallery's captions) are not translated. Saving checks
-permissions in every language, and keeps the translations of bricks whose type no longer exists.
+like the others (the translate button of a container translates the bricks inside it as well). Fields marked
+`translatable: true` inside a brick's repeater (e.g. the gallery's alt texts and captions) are translated per item: the
+items get an id, so a caption stays with its image when the images are reordered. Collapsed bricks show the default
+language's text, greyed out, until they are translated. Saving checks permissions in every language, and keeps the
+translations of bricks whose type no longer exists.
 
 ## Permissions
 

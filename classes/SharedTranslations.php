@@ -8,20 +8,27 @@ namespace NumenCode\Bricks\Classes;
  * Translations of a bricks field with a shared structure (translation: fields).
  *
  * The structure is the default language's list of bricks. Every other language stores only the values of the fields
- * marked `translatable: true` (top-level fields of the brick type), per brick id:
+ * marked `translatable: true`, per id:
  *
  *     {"k3v9q0x2ma": {"text": "Naslov"}, "p8d1w5rj4c": {"content": "<p>Besedilo</p>"}}
  *
  * An empty value means "not translated": the default language's value is used (fallback per field).
  *
- * Bricks inside bricks (e.g. in the columns of Columns) are in the same map: ids are unique in the whole tree. A brick's
- * nested lists are its values that hold bricks (arrays with a "_group", nestedLists()); bricks without an id (e.g. the
- * items of an ordinary repeater in group mode) never take part.
+ * What is translated (a "unit", units()): every brick with an id – also bricks inside bricks (e.g. in the columns of
+ * Columns, nestedLists()) – and every item with an id of a brick's repeater whose form has translatable fields (e.g.
+ * the gallery's images with their captions, itemLists(); FieldBuilder gives these items an id field). All ids are unique
+ * in the whole field, so one flat map holds them all. The translatable fields are looked up by the brick's type code,
+ * for items by "<code>.<repeater field>" (translatableOf()). Values without an id never take part.
  */
 class SharedTranslations
 {
     /**
-     * The names of a brick type's translatable fields.
+     * Separates a brick type's code and a repeater field's name in the key of the repeater items' translatable fields.
+     */
+    public const ITEM_SEPARATOR = '.';
+
+    /**
+     * The names of a brick type's translatable fields (its own fields).
      *
      * @param array<string, mixed> $fields A repeater group's (or brick type's) field definitions
      * @return array<int, string>
@@ -44,14 +51,67 @@ class SharedTranslations
     }
 
     /**
-     * The translatable fields of every repeater group.
+     * The translatable fields of the items of a brick type's repeaters (an ordinary repeater with its form inline, not
+     * a bricks field): repeater field name => the item fields marked `translatable: true`.
+     *
+     * @param array<string, mixed> $fields
+     * @return array<string, array<int, string>>
+     */
+    public static function itemFields(array $fields): array
+    {
+        $items = [];
+
+        foreach ($fields as $name => $config) {
+            if (
+                !is_array($config)
+                || ($config['type'] ?? null) !== 'repeater'
+                || isset($config['groups'])
+                || isset($config['containerAttributes']['data-bricks'])
+                || !is_array($config['form']['fields'] ?? null)
+            ) {
+                continue;
+            }
+
+            if ($names = static::translatableFields($config['form']['fields'])) {
+                $items[(string) $name] = $names;
+            }
+        }
+
+        return $items;
+    }
+
+    /**
+     * The translatable fields of a brick type: its code => its fields, "<code>.<repeater>" => the repeater items' fields.
+     *
+     * @param array<string, mixed> $fields
+     * @return array<string, array<int, string>>
+     */
+    public static function translatableOf(string $code, array $fields): array
+    {
+        $translatable = [$code => static::translatableFields($fields)];
+
+        foreach (static::itemFields($fields) as $name => $names) {
+            $translatable[$code . self::ITEM_SEPARATOR . $name] = $names;
+        }
+
+        return $translatable;
+    }
+
+    /**
+     * The translatable fields of every repeater group (see translatableOf()).
      *
      * @param array<string, array<string, mixed>> $groups code => group definition (with "fields")
-     * @return array<string, array<int, string>> code => field names
+     * @return array<string, array<int, string>>
      */
     public static function translatableByGroup(array $groups): array
     {
-        return array_map(fn ($group) => static::translatableFields((array) ($group['fields'] ?? [])), $groups);
+        $translatable = [];
+
+        foreach ($groups as $code => $group) {
+            $translatable += static::translatableOf((string) $code, (array) ($group['fields'] ?? []));
+        }
+
+        return $translatable;
     }
 
     /**
@@ -78,21 +138,21 @@ class SharedTranslations
      * The translations in a list of bricks posted in another language (the editor's items in translation mode).
      *
      * @param array<int|string, mixed> $items
-     * @param array<string, array<int, string>> $translatable code => field names
+     * @param array<string, array<int, string>> $translatable key => field names (translatableOf())
      * @return array<string, array<string, mixed>> id => [field => value]
      */
     public static function extract(array $items, array $translatable): array
     {
         $map = [];
 
-        foreach (static::flatten($items) as $item) {
-            if (!BrickIds::isValid($id = $item[FieldBuilder::ID_FIELD] ?? null)) {
+        foreach (static::units($items) as [$key, $unit]) {
+            if (!BrickIds::isValid($id = $unit[FieldBuilder::ID_FIELD] ?? null)) {
                 continue;
             }
 
-            foreach ($translatable[(string) ($item['_group'] ?? '')] ?? [] as $field) {
-                if (array_key_exists($field, $item) && !static::isEmpty($item[$field])) {
-                    $map[$id][$field] = $item[$field];
+            foreach ($translatable[$key] ?? [] as $field) {
+                if (array_key_exists($field, $unit) && !static::isEmpty($unit[$field])) {
+                    $map[$id][$field] = $unit[$field];
                 }
             }
         }
@@ -101,12 +161,11 @@ class SharedTranslations
     }
 
     /**
-     * Keeps the translations of the bricks in the structure, only of their type's translatable fields, without empty
-     * values.
+     * Keeps the translations of the units in the structure, only of their translatable fields, without empty values.
      *
      * @param mixed $map id => [field => value] (stored data: anything)
      * @param array<int|string, mixed> $structure
-     * @param array<string, array<int, string>> $translatable code => field names
+     * @param array<string, array<int, string>> $translatable key => field names (translatableOf())
      * @param array<int, string> $keep Codes whose translations are kept as they are (types that no longer exist: their
      *        fields are unknown, and they come back when the type does)
      * @return array<string, array<string, mixed>>
@@ -116,16 +175,16 @@ class SharedTranslations
         $map = is_array($map) ? $map : [];
         $cleaned = [];
 
-        foreach (static::flatten($structure) as $brick) {
-            if (!BrickIds::isValid($id = $brick[FieldBuilder::ID_FIELD] ?? null)) {
+        foreach (static::units($structure) as [$key, $unit]) {
+            if (!BrickIds::isValid($id = $unit[FieldBuilder::ID_FIELD] ?? null)) {
                 continue;
             }
 
             $values = is_array($map[$id] ?? null) ? $map[$id] : [];
-            $code = (string) ($brick['_group'] ?? '');
+            $code = explode(self::ITEM_SEPARATOR, $key)[0];
             $fields = in_array($code, $keep, true)
                 ? array_diff(array_map('strval', array_keys($values)), BrickType::RESERVED_FIELDS)
-                : $translatable[$code] ?? [];
+                : $translatable[$key] ?? [];
 
             foreach ($fields as $field) {
                 if (array_key_exists($field, $values) && !static::isEmpty($values[$field])) {
@@ -142,8 +201,8 @@ class SharedTranslations
      *
      * @param array<int|string, mixed> $structure
      * @param mixed $map id => [field => value]
-     * @param array<string, array<int, string>>|null $translatable code => field names; null: any field of the map
-     *        (the stored translations were cleaned on save)
+     * @param array<string, array<int, string>>|null $translatable key => field names (translatableOf()); null: any
+     *        field of the map (the stored translations were cleaned on save)
      * @param bool $fallback Untranslated fields keep the default value (website); false: they are emptied (editor)
      * @return array<int|string, mixed>
      */
@@ -156,22 +215,17 @@ class SharedTranslations
                 continue;
             }
 
-            $id = $brick[FieldBuilder::ID_FIELD] ?? null;
-            $values = BrickIds::isValid($id) && is_array($map[$id] ?? null) ? $map[$id] : [];
-            $fields = $translatable === null
-                ? array_keys($values)
-                : ($translatable[(string) ($brick['_group'] ?? '')] ?? []);
+            $code = (string) ($brick['_group'] ?? '');
+            $brick = static::apply($brick, $map, $translatable === null ? null : ($translatable[$code] ?? []), $fallback);
 
-            foreach ($fields as $field) {
-                if (in_array($field, BrickType::RESERVED_FIELDS, true)) {
-                    continue;
+            foreach (static::itemLists($brick) as $name => $items) {
+                $fields = $translatable === null ? null : ($translatable[$code . self::ITEM_SEPARATOR . $name] ?? []);
+
+                foreach ($items as $key => $item) {
+                    $items[$key] = static::apply($item, $map, $fields, $fallback);
                 }
 
-                if (array_key_exists($field, $values) && !static::isEmpty($values[$field])) {
-                    $brick[$field] = $values[$field];
-                } elseif (!$fallback) {
-                    $brick[$field] = '';
-                }
+                $brick[$name] = $items;
             }
 
             foreach (static::nestedLists($brick) as $name => $list) {
@@ -185,6 +239,34 @@ class SharedTranslations
     }
 
     /**
+     * A unit (brick or item) with its translations applied.
+     *
+     * @param array<string, mixed> $unit
+     * @param array<string, mixed> $map
+     * @param array<int, string>|null $fields The translatable fields; null: any field of the unit's translations
+     * @return array<string, mixed>
+     */
+    protected static function apply(array $unit, array $map, ?array $fields, bool $fallback): array
+    {
+        $id = $unit[FieldBuilder::ID_FIELD] ?? null;
+        $values = BrickIds::isValid($id) && is_array($map[$id] ?? null) ? $map[$id] : [];
+
+        foreach ($fields ?? array_keys($values) as $field) {
+            if (in_array($field, BrickType::RESERVED_FIELDS, true)) {
+                continue;
+            }
+
+            if (array_key_exists($field, $values) && !static::isEmpty($values[$field])) {
+                $unit[$field] = $values[$field];
+            } elseif (!$fallback) {
+                $unit[$field] = '';
+            }
+        }
+
+        return $unit;
+    }
+
+    /**
      * The bricks of a list and of the lists inside them, depth first.
      *
      * @param array<int|string, mixed> $bricks
@@ -192,21 +274,43 @@ class SharedTranslations
      */
     public static function flatten(array $bricks): array
     {
-        $flat = [];
+        return array_values(array_map(
+            fn (array $unit) => $unit[1],
+            array_filter(static::units($bricks), fn (array $unit) => !str_contains($unit[0], self::ITEM_SEPARATOR)),
+        ));
+    }
+
+    /**
+     * Everything translated in a list of bricks: [key, value] of every brick (key: its type code) and of every
+     * repeater item with an id (key: "<code>.<repeater field>"), depth first.
+     *
+     * @param array<int|string, mixed> $bricks
+     * @return array<int, array{0: string, 1: array<string, mixed>}>
+     */
+    public static function units(array $bricks): array
+    {
+        $units = [];
 
         foreach ($bricks as $brick) {
             if (!is_array($brick)) {
                 continue;
             }
 
-            $flat[] = $brick;
+            $code = (string) ($brick['_group'] ?? '');
+            $units[] = [$code, $brick];
+
+            foreach (static::itemLists($brick) as $name => $items) {
+                foreach ($items as $item) {
+                    $units[] = [$code . self::ITEM_SEPARATOR . $name, $item];
+                }
+            }
 
             foreach (static::nestedLists($brick) as $list) {
-                array_push($flat, ...static::flatten($list));
+                array_push($units, ...static::units($list));
             }
         }
 
-        return $flat;
+        return $units;
     }
 
     /**
@@ -217,6 +321,27 @@ class SharedTranslations
      */
     public static function nestedLists(array $brick): array
     {
+        return static::listsOf($brick, true);
+    }
+
+    /**
+     * A brick's repeater items that can be translated (its values whose items are arrays without a "_group", at least
+     * one with an id): field name => items.
+     *
+     * @param array<string, mixed> $brick
+     * @return array<string, array<int|string, array<string, mixed>>>
+     */
+    public static function itemLists(array $brick): array
+    {
+        return static::listsOf($brick, false);
+    }
+
+    /**
+     * @param array<string, mixed> $brick
+     * @return array<string, array<int|string, array<string, mixed>>>
+     */
+    protected static function listsOf(array $brick, bool $bricks): array
+    {
         $lists = [];
 
         foreach ($brick as $name => $value) {
@@ -224,13 +349,19 @@ class SharedTranslations
                 continue;
             }
 
+            $withId = false;
+
             foreach ($value as $item) {
-                if (!is_array($item) || !is_string($item['_group'] ?? null)) {
+                if (!is_array($item) || is_string($item['_group'] ?? null) !== $bricks) {
                     continue 2;
                 }
+
+                $withId = $withId || BrickIds::isValid($item[FieldBuilder::ID_FIELD] ?? null);
             }
 
-            $lists[(string) $name] = $value;
+            if ($bricks || $withId) {
+                $lists[(string) $name] = $value;
+            }
         }
 
         return $lists;

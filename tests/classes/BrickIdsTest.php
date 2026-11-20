@@ -80,6 +80,37 @@ class BrickIdsTest extends BricksTestCase
         );
     }
 
+    public function testItemsOfRepeatersWithTranslatableFieldsGetIds(): void
+    {
+        $theme = $this->useFixtureTheme();
+        $types = \NumenCode\Bricks\Classes\BrickRegistry::instance()->all($theme);
+
+        $this->assertSame(['images' => ['alt', 'caption']], $types['gallery']->translatableItems());
+
+        $bricks = BrickIds::bricks([
+            ['_group' => 'gallery', '_id' => 'g1', 'images' => [
+                ['image' => '/a.jpg', 'caption' => 'A', '_id' => 'g1'],
+                ['image' => '/b.jpg', 'caption' => 'B'],
+            ]],
+        ], $types);
+        $ids = array_column($bricks[0]['images'], '_id');
+
+        $this->assertSame('g1', $bricks[0]['_id']);
+        $this->assertCount(2, array_filter($ids, [BrickIds::class, 'isValid']));
+        $this->assertNotContains('g1', $ids, 'ids are unique in the whole tree');
+        $this->assertNotSame($ids[0], $ids[1]);
+
+        // The gallery's item form posts the id back
+        $groups = FieldBuilder::groups(['gallery' => $types['gallery']]);
+        $this->assertSame('partial', $groups['gallery']['fields']['images']['form']['fields'][FieldBuilder::ID_FIELD]['type']);
+
+        $this->assertSame(
+            PermissionGuard::fingerprint(['_group' => 'gallery', 'images' => [['image' => '/a.jpg']]]),
+            PermissionGuard::fingerprint(['_group' => 'gallery', 'images' => [['image' => '/a.jpg', '_id' => 'x1']]]),
+            'an item id is not a change of the content',
+        );
+    }
+
     public function testEveryLanguageOfAPageGetsIds(): void
     {
         if (!class_exists(Page::class) || !class_exists(Locale::class)) {
