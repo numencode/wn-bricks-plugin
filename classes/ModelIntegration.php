@@ -45,7 +45,7 @@ class ModelIntegration
             return;
         }
 
-        $host = new ModelHost($model, static::fieldKeys($form));
+        $host = new ModelHost($model, static::fieldKeys($form), static::fieldKeys($form, true));
 
         if (!$host->fields()) {
             return;
@@ -75,16 +75,22 @@ class ModelIntegration
     /**
      * The attributes of the form's "type: bricks" fields (in all field containers).
      *
+     * @param bool $shared Only the fields with a shared structure (translation: fields)
      * @return array<int, string>
      */
-    public static function fieldKeys(Form $form): array
+    public static function fieldKeys(Form $form, bool $shared = false): array
     {
         $keys = [];
         $host = new ModelHost($form->model, []);
 
         foreach ([(array) $form->fields, (array) ($form->tabs['fields'] ?? []), (array) ($form->secondaryTabs['fields'] ?? [])] as $fields) {
             foreach ($fields as $name => $config) {
-                if (is_array($config) && ($config['type'] ?? null) === PagesIntegration::FIELD_TYPE && ($key = $host->key((string) $name)) !== null) {
+                if (
+                    is_array($config)
+                    && ($config['type'] ?? null) === PagesIntegration::FIELD_TYPE
+                    && (!$shared || FieldBuilder::isShared($config))
+                    && ($key = $host->key((string) $name)) !== null
+                ) {
                     $keys[] = $key;
                 }
             }

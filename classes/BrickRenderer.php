@@ -25,7 +25,7 @@ class BrickRenderer
     public const DEFAULT_FIELD = 'bricks';
 
     /**
-     * @var array<string, array<int, string>> Bricks field names per layout file
+     * @var array<string, array<string, array<string, mixed>>> Bricks fields (name => definition) per layout file
      */
     protected static array $fieldNames = [];
 
@@ -233,6 +233,26 @@ class BrickRenderer
      */
     public static function fieldNames(Page $staticPage): array
     {
+        return array_keys(static::fieldConfigs($staticPage));
+    }
+
+    /**
+     * The names of the layout's bricks fields with a shared structure (translation="fields").
+     *
+     * @return array<int, string>
+     */
+    public static function sharedFieldNames(Page $staticPage): array
+    {
+        return array_keys(array_filter(static::fieldConfigs($staticPage), [FieldBuilder::class, 'isShared']));
+    }
+
+    /**
+     * The layout's bricks fields: name => definition (cached per layout file and modification time).
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    public static function fieldConfigs(Page $staticPage): array
+    {
         $layout = $staticPage->getLayoutObject();
 
         if (!$layout) {
@@ -246,7 +266,7 @@ class BrickRenderer
 
             foreach ($staticPage->listLayoutSyntaxFields() as $name => $config) {
                 if (($config['type'] ?? null) === PagesIntegration::FIELD_TYPE) {
-                    static::$fieldNames[$key][] = (string) $name;
+                    static::$fieldNames[$key][(string) $name] = (array) $config;
                 }
             }
         }

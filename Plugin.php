@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NumenCode\Bricks;
 
 use NumenCode\Bricks\Classes\BrickRenderer;
+use NumenCode\Bricks\Classes\FieldBuilder;
 use NumenCode\Bricks\Classes\PagesIntegration;
 use NumenCode\Bricks\Classes\VideoUrl;
 use NumenCode\Bricks\Console\ClearMarkup;
@@ -12,6 +13,7 @@ use NumenCode\Bricks\Console\ConvertPages;
 use NumenCode\Bricks\Console\CreateBrick;
 use NumenCode\Bricks\Console\ListBricks;
 use NumenCode\Bricks\Console\ValidateBricks;
+use NumenCode\Bricks\FormWidgets\SharedBricks;
 use System\Classes\PluginBase;
 
 class Plugin extends PluginBase
@@ -46,6 +48,13 @@ class Plugin extends PluginBase
     public function boot(): void
     {
         PagesIntegration::register();
+    }
+
+    public function registerFormWidgets(): array
+    {
+        return [
+            SharedBricks::class => FieldBuilder::SHARED_WIDGET,
+        ];
     }
 
     public function registerPermissions(): array

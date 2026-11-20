@@ -25,6 +25,11 @@ class PageHost extends BrickHost
         return $this->fieldKeys ??= BrickRenderer::fieldNames($this->model);
     }
 
+    public function sharedFields(): array
+    {
+        return array_values(array_intersect($this->fields(), BrickRenderer::sharedFieldNames($this->model)));
+    }
+
     public function formName(string $field): string
     {
         return 'viewBag[' . $field . ']';
@@ -54,7 +59,17 @@ class PageHost extends BrickHost
 
     public function isTranslatable(string $field): bool
     {
+        return $this->usesTranslate() && !$this->isShared($field);
+    }
+
+    protected function usesTranslate(): bool
+    {
         return $this->model->isClassExtendedWith('Winter.Translate.Behaviors.TranslatableCmsObject');
+    }
+
+    public function registerTranslations(string $field): void
+    {
+        $this->makeTranslatable(FieldBuilder::translationsKey($field));
     }
 
     public function makeTranslatable(string $field): void

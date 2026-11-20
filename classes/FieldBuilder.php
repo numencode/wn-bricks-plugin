@@ -14,7 +14,25 @@ class FieldBuilder
     /**
      * Options of a bricks field that are handled here and not passed to the repeater.
      */
-    public const OWN_OPTIONS = ['allow', 'ignore'];
+    public const OWN_OPTIONS = ['allow', 'ignore', self::TRANSLATION_OPTION];
+
+    /**
+     * How a bricks field is translated (Winter.Translate): "lists" (default) – one list of bricks per language;
+     * "fields" – one shared list, edited in the default language, and per language only the values of the fields
+     * marked `translatable: true`, stored per brick id in the attribute <field>TRANSLATIONS_SUFFIX.
+     */
+    public const TRANSLATION_OPTION = 'translation';
+
+    public const TRANSLATION_LISTS = 'lists';
+
+    public const TRANSLATION_FIELDS = 'fields';
+
+    public const TRANSLATIONS_SUFFIX = '_translations';
+
+    /**
+     * The form widget of a field with a shared structure (translation: fields).
+     */
+    public const SHARED_WIDGET = 'sharedbricks';
 
     public const DEFAULT_PROMPT = 'numencode.bricks::lang.field.prompt';
 
@@ -143,7 +161,10 @@ class FieldBuilder
         $field = array_merge(
             ['label' => self::DEFAULT_LABEL, 'prompt' => self::DEFAULT_PROMPT, 'style' => 'collapsed'],
             array_filter($field, fn ($value) => $value !== null && $value !== ''),
-            ['type' => 'repeater', 'groups' => self::groups($types, $readOnly)],
+            [
+                'type'   => static::isShared($config) ? self::SHARED_WIDGET : 'repeater',
+                'groups' => self::groups($types, $readOnly),
+            ],
         );
 
         $attributes = ['data-bricks' => static::clientConfig($types, $client)];
@@ -155,6 +176,41 @@ class FieldBuilder
         $field['containerAttributes'] = array_merge((array) ($field['containerAttributes'] ?? []), $attributes);
 
         return $field;
+    }
+
+    /**
+     * Whether a bricks field definition has a shared structure (translation: fields).
+     *
+     * @param array<string, mixed> $config
+     * @throws \Winter\Storm\Exception\SystemException For an unknown translation mode
+     */
+    public static function isShared(array $config): bool
+    {
+        $mode = $config[self::TRANSLATION_OPTION] ?? null;
+
+        if ($mode === null || $mode === '' || $mode === self::TRANSLATION_LISTS) {
+            return false;
+        }
+
+        if ($mode === self::TRANSLATION_FIELDS) {
+            return true;
+        }
+
+        throw new \Winter\Storm\Exception\SystemException(sprintf(
+            'Unknown bricks "%s" option "%s" (use "%s" or "%s").',
+            self::TRANSLATION_OPTION,
+            is_scalar($mode) ? (string) $mode : gettype($mode),
+            self::TRANSLATION_LISTS,
+            self::TRANSLATION_FIELDS,
+        ));
+    }
+
+    /**
+     * The attribute (model) or viewBag key (static page) holding the translations of a shared field.
+     */
+    public static function translationsKey(string $field): string
+    {
+        return $field . self::TRANSLATIONS_SUFFIX;
     }
 
     /**

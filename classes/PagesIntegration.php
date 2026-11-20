@@ -213,6 +213,20 @@ class PagesIntegration
             // Stored bricks whose type no longer exists keep their content (hidden in "Add brick", like $all's rest)
             $known = $all + UnknownBricks::types($host, (string) $name, $all);
             $key = $host->key((string) $name) ?? (string) $name;
+
+            // A shared structure (translation: fields): the list stays untranslated, its translations are stored
+            // per language in their own attribute
+            if (FieldBuilder::isShared($config)) {
+                $client = $translatable ? ['locales' => static::localeConfig()] : [];
+                $fields[$name] = FieldBuilder::field($config, $offered, $known, $denied, $client);
+
+                if ($translatable) {
+                    $host->registerTranslations($key);
+                }
+
+                continue;
+            }
+
             $fieldTranslatable = $translatable && ($host instanceof PageHost || $host->isTranslatable($key));
             $client = $fieldTranslatable ? ['locales' => static::localeConfig()] : [];
             $fields[$name] = FieldBuilder::field($config, $offered, $known, $denied, $client);

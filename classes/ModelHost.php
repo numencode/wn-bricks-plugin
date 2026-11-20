@@ -12,8 +12,9 @@ class ModelHost extends BrickHost
 {
     /**
      * @param array<int, string> $fieldKeys The bricks attributes (from the form's "type: bricks" fields)
+     * @param array<int, string> $sharedKeys The ones with a shared structure (translation: fields)
      */
-    public function __construct(object $model, protected array $fieldKeys)
+    public function __construct(object $model, protected array $fieldKeys, protected array $sharedKeys = [])
     {
         parent::__construct($model);
     }
@@ -21,6 +22,11 @@ class ModelHost extends BrickHost
     public function fields(): array
     {
         return $this->fieldKeys;
+    }
+
+    public function sharedFields(): array
+    {
+        return array_values(array_intersect($this->fieldKeys, $this->sharedKeys));
     }
 
     public function formName(string $field): string
@@ -54,9 +60,43 @@ class ModelHost extends BrickHost
 
     public function isTranslatable(string $field): bool
     {
-        return method_exists($this->model, 'isClassExtendedWith')
-            && $this->model->isClassExtendedWith('Winter.Translate.Behaviors.TranslatableModel')
+        return $this->usesTranslate()
+            && !$this->isShared($field)
             && in_array($field, (array) $this->model->getTranslatableAttributes(), true);
+    }
+
+    protected function usesTranslate(): bool
+    {
+        return method_exists($this->model, 'isClassExtendedWith')
+            && $this->model->isClassExtendedWith('Winter.Translate.Behaviors.TranslatableModel');
+    }
+
+    /**
+     * The translations attribute has no column: Winter.Translate stores it per language, and the default language
+     * never sets it.
+     *
+     * @throws \Winter\Storm\Exception\SystemException When the model declares the shared list itself translatable
+     */
+    public function registerTranslations(string $field): void
+    {
+        if (!$this->usesTranslate()) {
+            return;
+        }
+
+        $translatable = (array) $this->model->getTranslatableAttributes();
+
+        if (in_array($field, $translatable, true)) {
+            throw new \Winter\Storm\Exception\SystemException(sprintf(
+                'The bricks field "%s" of %s has a shared structure (translation: fields), so it must not be translatable itself: remove it from $translatable (its translations are stored in "%s").',
+                $field,
+                get_class($this->model),
+                FieldBuilder::translationsKey($field),
+            ));
+        }
+
+        if (!in_array($key = FieldBuilder::translationsKey($field), $translatable, true)) {
+            $this->model->addTranslatableAttributes($key);
+        }
     }
 
     protected function translationKey(string $field): string

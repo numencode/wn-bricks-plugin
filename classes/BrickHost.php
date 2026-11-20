@@ -74,9 +74,38 @@ abstract class BrickHost
     abstract public function stored(string $field): array;
 
     /**
-     * Whether a field has translations (Winter.Translate on this model, and the field translatable).
+     * Whether a field has a list of bricks per language (Winter.Translate on this model, and the list translatable).
+     * Fields with a shared structure (translation: fields) don't: see hasTranslations().
      */
     abstract public function isTranslatable(string $field): bool;
+
+    /**
+     * The keys of the fields with a shared structure (translation: fields).
+     *
+     * @return array<int, string>
+     */
+    abstract public function sharedFields(): array;
+
+    /**
+     * Whether a field has a shared structure (translation: fields).
+     */
+    public function isShared(string $field): bool
+    {
+        return in_array($field, $this->sharedFields(), true);
+    }
+
+    /**
+     * Whether a shared field stores per-language translations of its bricks (with Winter.Translate).
+     */
+    public function hasTranslations(string $field): bool
+    {
+        return $this->isShared($field) && $this->usesTranslate();
+    }
+
+    /**
+     * Whether the model uses Winter.Translate's behavior.
+     */
+    abstract protected function usesTranslate(): bool;
 
     /**
      * The attribute Winter.Translate stores a field's translation under.
@@ -96,6 +125,12 @@ abstract class BrickHost
     public function makeTranslatable(string $field): void
     {
     }
+
+    /**
+     * Registers where a shared field's translations are stored (FieldBuilder::translationsKey()) as a translatable
+     * attribute, so Winter.Translate stores it per language. The list itself stays untranslated.
+     */
+    abstract public function registerTranslations(string $field): void;
 
     /**
      * The enabled languages other than the default one (none without Winter.Translate).
