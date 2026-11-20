@@ -73,7 +73,7 @@ class CommandsTest extends CommandTestCase
         [$code, $output] = $this->command('bricks:validate');
         $this->assertSame(1, $code);
         $this->assertStringContainsString('unknown type "txt"', $output);
-        $this->assertStringContainsString('5 error(s), 8 warning(s)', $output);
+        $this->assertStringContainsString('6 error(s), 8 warning(s)', $output);
 
         [$code, $output] = $this->command('bricks:validate', ['--theme' => 'nope']);
         $this->assertSame(1, $code);

@@ -28,6 +28,11 @@ The first release.
 - **Translations** with Winter.Translate: one list of bricks per language, "copy from" another language (with machine
   translation of the fields marked `translatable: true`), and a hint above an empty list in another language, which
   shows the default language's bricks on the website, with a button to copy them.
+- **Shared brick structure** (`translation: fields`, per field): one list of bricks arranged in the default language;
+  other languages translate only the fields marked `translatable: true` (stored per brick id in
+  `<field>_translations`), with fallback per field on the website, language buttons in the editor (structure locked,
+  the default text as a placeholder), machine translation of all empty fields or one brick with Winter.Translate's
+  providers, and NumenCode.Fundamentals' language selector switching the field too.
 - **Editor:**
   - collapsed bricks show their type and a summary of their content
   - "Expand all" / "Collapse all"
@@ -50,13 +55,15 @@ The first release.
     markup (`--markup`) into the theme
   - `bricks:list` lists the brick types, where each comes from and what it overrides
   - `bricks:validate` checks every definition and markup file (field types, Twig, components, lang keys,
-    permissions, unused partials) and exits with 1 on errors, for CI (`--theme-only`, `--strict`)
+    permissions, unused partials, the layouts' `translation` options) and exits with 1 on errors, for CI
+    (`--theme-only`, `--strict`)
   - `bricks:convert-pages` turns the content of static pages into bricks in every language: snippets into component
     bricks, headings, images and dividers into their bricks, the rest into text bricks; the old content is kept
   - `bricks:clear-markup` removes the old content of converted pages once they are checked
 - `BrickRegistry::sources()` lists every definition of each brick code, also the replaced ones.
 - **Bricks on any model:** a `type: bricks` field in a model's form (a jsonable attribute; translatable with
   Winter.Translate's TranslatableModel), with the same editor, permission check and cleanup as on static pages.
-  `renderBricks(list, 'name')` renders a model's bricks; their component bricks are created while rendering.
+  `renderBricks(post, 'bricks')` renders a model's bricks in the visitor's language (`renderBricks(list, 'name')`
+  a plain list); their component bricks are created while rendering.
 
 [Unreleased]: https://github.com/numencode/wn-bricks-plugin/commits/main

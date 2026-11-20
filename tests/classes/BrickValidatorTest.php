@@ -64,6 +64,8 @@ class BrickValidatorTest extends BricksTestCase
             'error missing missing.yaml: the component class Acme\Nope\Components\Nope doesn\'t exist',
             // Partials without a type ("_helper" is a helper partial)
             'warning orphan orphan.htm: the partial is not used: there is no brick type with this code',
+            // Layouts: the bricks fields' translation option
+            'error wrong translated.htm: the bricks field: Unknown bricks "translation" option "per-field" (use "lists" or "fields").',
         ];
 
         // The base set is valid; the order of the codes follows the registry

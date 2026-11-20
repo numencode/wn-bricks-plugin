@@ -22,7 +22,8 @@ plugins or themes, and themes can override every brick's markup.
   snippet component (e.g. [NumenCode.Widgets](https://github.com/numencode/wn-widgets-plugin)) is a brick
   automatically.
 - **Translations** – with [Winter.Translate](https://github.com/wintercms/wn-translate-plugin), each language has its own
-  list of bricks, with "copy from" (and machine translation of the marked fields).
+  list of bricks, with "copy from" (and machine translation of the marked fields); or, per field, one **shared
+  structure** that other languages only translate (per field, with fallback and machine translation).
 - **A comfortable editor** – collapsed bricks show their type and a summary of their content; "Expand all" /
   "Collapse all"; duplicate, hide, and copy and paste between pages and languages; an anchor and a CSS class on every brick; the "Add brick" list in
   sections (the theme's own bricks first, then the general ones, then each plugin's); "Edit …" links to where a component brick's content is managed; the page preview as its own tab.
@@ -93,6 +94,7 @@ Pages that still have rich-editor content can fall back to it while they have no
 | `prompt` | The text of the "Add brick" button. |
 | `allow` | Only these brick types are offered, in this order (comma separated codes). |
 | `ignore` | These brick types are not offered. |
+| `translation` | With Winter.Translate: `lists` (default) – one list of bricks per language; `fields` – one shared structure, see [Translations](#translations). |
 
 Bricks of types a field doesn't offer (because of `allow`/`ignore` or permissions) keep their content: they can't be
 added, but existing ones are shown and saved unchanged.
@@ -259,7 +261,8 @@ Reads every definition separately (also the replaced ones), so one broken file d
 when there are errors – add it to your CI pipeline or a deploy check.
 
 - **Errors** (they break the editor or the website): invalid definitions, unknown field types (also in nested forms),
-  Twig syntax errors and unknown filters, functions or tags in the markup, missing or unregistered components.
+  Twig syntax errors and unknown filters, functions or tags in the markup, missing or unregistered components, an
+  unknown `translation` option of a bricks field in the theme's layouts.
 - **Warnings:** lang keys that don't exist, permissions that aren't registered, a component brick's field that isn't one
   of its properties or a `titleFrom` that isn't a field, theme partials that no brick type uses (partials starting
   with `_` are helpers and skipped) or that a component brick ignores.
@@ -408,6 +411,36 @@ repeater):
 The lists are independent after the copy: adding, moving or removing a brick in one language doesn't change the other
 languages. A component brick's own content (e.g. a widget group) is translated where it is managed.
 
+### Shared structure (`translation: fields`)
+
+For sites where every language has the same layout, a bricks field can have **one shared structure**:
+
+```twig
+{variable type="bricks" name="bricks" tab="Content" translation="fields"}{/variable}
+```
+
+```yaml
+# a model's fields.yaml (the attribute must not be in $translatable; Bricks stores the translations itself)
+bricks:
+    type: bricks
+    translation: fields
+```
+
+- The bricks are arranged in the **default language**: adding, moving, hiding and removing bricks, and every value.
+- The language buttons above the bricks show **another language**: the same bricks, locked. Only the fields marked
+  `translatable: true` in the brick type can be edited; an empty field shows the default text as a placeholder (or
+  below the field). Other fields are shown read-only.
+- On the website an **untranslated field shows the default language's value** (fallback per field), so a new brick
+  appears in every language at once.
+- With a Winter.Translate **translation provider** (DeepL, Google: `winter.translate::providers` with a key),
+  "Translate empty fields from …" machine-translates every empty field, and the translate button of a brick translates
+  that brick again.
+- NumenCode.Fundamentals' form language selector (on model forms) switches the field too.
+- On models, render it with `renderBricks(post, 'bricks')`: a plain list (`post.bricks`) has no translations.
+
+Only a brick's own fields are translated: fields inside a nested list (e.g. the gallery's captions) are not. Saving
+checks permissions in every language, and keeps the translations of bricks whose type no longer exists.
+
 ## Permissions
 
 - `numencode.bricks.use_html` – add and edit HTML bricks.
@@ -419,8 +452,8 @@ languages. A component brick's own content (e.g. a widget group) is translated w
 ## Data format
 
 Bricks are stored in the page's `viewBag` (the page file in `content/static-pages`, the other languages in
-`content/static-pages-<locale>`), one entry per brick, with the type in `_group` and a stable id in `_id` (assigned when the page is
-saved; a duplicated or pasted brick gets a new one):
+`content/static-pages-<locale>`), one entry per brick, with the type in `_group` and a stable id in `_id` (assigned when
+the page is saved; a duplicated or pasted brick gets a new one):
 
 ```ini
 [viewBag]
@@ -441,6 +474,15 @@ bricks[2][_group] = "spacer"
 bricks[2][_id] = "z0t7h2nb6e"
 ```
 
+A shared structure (`translation: fields`) stores only the translated values in the other languages, per brick id
+(`<name>_translations`; on a model, a translated attribute without a column):
+
+```ini
+[viewBag]
+bricks_translations[k3v9q0x2ma][text] = "Naša zgodba"
+bricks_translations[p8d1w5rj4c][content] = "<p>Začelo se je v majhni delavnici …</p>"
+```
+
 The pages stay theme files: deploy them as before. Bricks need no cache of their own: Winter caches the parsed YAML
 definitions by their modification time.
 
@@ -448,9 +490,6 @@ definitions by their modification time.
 
 Planned before the first release (1.0.0):
 
-- **Shared brick structure with per-field translations** (opt-in per field, e.g.
-  `{variable type="bricks" translation="fields"}`): one list of bricks, arranged in the default language; other
-  languages translate the text fields, and an untranslated field shows the default language's value.
 - **Bricks inside bricks:** a bricks field inside a brick type. The Columns brick will hold a list of bricks per
   column.
 

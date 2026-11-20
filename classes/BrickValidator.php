@@ -83,8 +83,37 @@ class BrickValidator
         }
 
         $this->checkUnusedPartials(array_map('strval', array_keys($sources)));
+        $this->checkLayouts();
 
         return $this->issues;
+    }
+
+    /**
+     * The bricks fields of the theme's layouts ({variable type="bricks"}): their "translation" option.
+     */
+    protected function checkLayouts(): void
+    {
+        foreach (\Cms\Classes\Layout::listInTheme($this->theme, true) as $layout) {
+            $file = $layout->getFilePath();
+
+            try {
+                $fields = \Winter\Storm\Parse\Syntax\Parser::parse((string) $layout->markup, ['tagPrefix' => 'page:'])->toEditor();
+            } catch (\Throwable $exception) {
+                continue;
+            }
+
+            foreach ($fields as $name => $config) {
+                if (!is_array($config) || ($config['type'] ?? null) !== PagesIntegration::FIELD_TYPE) {
+                    continue;
+                }
+
+                try {
+                    FieldBuilder::isShared($config);
+                } catch (\Winter\Storm\Exception\SystemException $exception) {
+                    $this->error((string) $name, $file, 'the bricks field: ' . $exception->getMessage());
+                }
+            }
+        }
     }
 
     /**
