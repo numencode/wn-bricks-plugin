@@ -336,7 +336,7 @@
         // A shared structure shown in another language, with a machine translation service: translate this brick
         var $shared = $item.closest('[data-translate-handler]');
 
-        if ($shared.length && !$item.find('[data-field-name="_bricks_nothing"]').length) {
+        if ($shared.length && !ownFields($item).filter('[data-field-name="_bricks_nothing"]').length) {
             $('<button type="button" class="bricks-item-action" data-bricks-action="translate">')
                 .attr('title', $shared.attr('data-translate-label') || 'Translate')
                 .append('<i class="icon-language"></i>')

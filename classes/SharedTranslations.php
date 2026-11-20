@@ -13,6 +13,10 @@ namespace NumenCode\Bricks\Classes;
  *     {"k3v9q0x2ma": {"text": "Naslov"}, "p8d1w5rj4c": {"content": "<p>Besedilo</p>"}}
  *
  * An empty value means "not translated": the default language's value is used (fallback per field).
+ *
+ * Bricks inside bricks (e.g. in the columns of Columns) are in the same map: ids are unique in the whole tree. A brick's
+ * nested lists are its values that hold bricks (arrays with a "_group", nestedLists()); bricks without an id (e.g. the
+ * items of an ordinary repeater in group mode) never take part.
  */
 class SharedTranslations
 {
@@ -81,8 +85,8 @@ class SharedTranslations
     {
         $map = [];
 
-        foreach ($items as $item) {
-            if (!is_array($item) || !BrickIds::isValid($id = $item[FieldBuilder::ID_FIELD] ?? null)) {
+        foreach (static::flatten($items) as $item) {
+            if (!BrickIds::isValid($id = $item[FieldBuilder::ID_FIELD] ?? null)) {
                 continue;
             }
 
@@ -112,8 +116,8 @@ class SharedTranslations
         $map = is_array($map) ? $map : [];
         $cleaned = [];
 
-        foreach ($structure as $brick) {
-            if (!is_array($brick) || !BrickIds::isValid($id = $brick[FieldBuilder::ID_FIELD] ?? null)) {
+        foreach (static::flatten($structure) as $brick) {
+            if (!BrickIds::isValid($id = $brick[FieldBuilder::ID_FIELD] ?? null)) {
                 continue;
             }
 
@@ -170,9 +174,65 @@ class SharedTranslations
                 }
             }
 
+            foreach (static::nestedLists($brick) as $name => $list) {
+                $brick[$name] = static::merge($list, $map, $translatable, $fallback);
+            }
+
             $structure[$index] = $brick;
         }
 
         return $structure;
+    }
+
+    /**
+     * The bricks of a list and of the lists inside them, depth first.
+     *
+     * @param array<int|string, mixed> $bricks
+     * @return array<int, array<string, mixed>>
+     */
+    public static function flatten(array $bricks): array
+    {
+        $flat = [];
+
+        foreach ($bricks as $brick) {
+            if (!is_array($brick)) {
+                continue;
+            }
+
+            $flat[] = $brick;
+
+            foreach (static::nestedLists($brick) as $list) {
+                array_push($flat, ...static::flatten($list));
+            }
+        }
+
+        return $flat;
+    }
+
+    /**
+     * A brick's lists of bricks (its values whose items all have a "_group"): field name => list.
+     *
+     * @param array<string, mixed> $brick
+     * @return array<string, array<int|string, array<string, mixed>>>
+     */
+    public static function nestedLists(array $brick): array
+    {
+        $lists = [];
+
+        foreach ($brick as $name => $value) {
+            if (!is_array($value) || $value === [] || in_array($name, BrickType::RESERVED_FIELDS, true)) {
+                continue;
+            }
+
+            foreach ($value as $item) {
+                if (!is_array($item) || !is_string($item['_group'] ?? null)) {
+                    continue 2;
+                }
+            }
+
+            $lists[(string) $name] = $value;
+        }
+
+        return $lists;
     }
 }

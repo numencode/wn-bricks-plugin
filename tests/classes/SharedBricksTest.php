@@ -35,6 +35,10 @@ class SharedBricksTest extends BricksTestCase
         }
 
         $this->theme = $this->useFixtureTheme();
+        // A container (title translatable, "inner" holds bricks)
+        BrickRegistry::instance()->registerCallback(
+            fn (BrickRegistry $registry) => $registry->registerBricks(['box' => $this->fixturePath('bricks/box')], 'Test'),
+        );
         Locale::create(['code' => 'sl', 'name' => 'Slovenščina', 'is_enabled' => true]);
         Locale::clearCache();
     }
@@ -54,7 +58,7 @@ class SharedBricksTest extends BricksTestCase
     {
         $field = new FormField('viewBag[bricks]', 'Bricks');
         $field->value = $page->viewBag['bricks'] ?? null;
-        $offered = BrickRegistry::instance()->filter(['text', 'quote', 'spacer'], [], $this->theme);
+        $offered = BrickRegistry::instance()->filter(['text', 'quote', 'spacer', 'box'], [], $this->theme);
         // A brick type that no longer exists, as PagesIntegration adds it for stored bricks
         $config = FieldBuilder::field(
             ['type' => 'bricks', 'translation' => 'fields'],
@@ -257,6 +261,115 @@ class SharedBricksTest extends BricksTestCase
         $translations = $this->renderedTranslations($this->widget($this->page())->onTranslateBricks());
 
         $this->assertSame(['q1' => ['quote' => '[sl from en] First']], $translations);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>> A box (b1) with a quote (q1) and a spacer (s1) inside
+     */
+    protected function nestedStructure(): array
+    {
+        return [
+            ['_group' => 'box', '_id' => 'b1', 'title' => 'Box', 'inner' => [
+                ['_group' => 'quote', '_id' => 'q1', 'quote' => 'Words', 'author' => 'Ann'],
+                ['_group' => 'spacer', '_id' => 's1', 'size' => 'large'],
+            ]],
+        ];
+    }
+
+    public function testNestedBricksAreTranslatedInTheirLockedList(): void
+    {
+        $this->postForm([
+            'viewBag'                     => ['bricks' => [
+                ['_group' => 'box', '_id' => 'b1', 'title' => 'Škatla', 'inner' => [
+                    ['_group' => 'quote', '_id' => 'q1', 'quote' => 'Besede', 'author' => 'Changed'],
+                    ['_group' => 'spacer', '_id' => 's1', 'size' => 'small'],
+                ]],
+            ]],
+            self::ALIAS . '_locale'       => 'sl',
+            self::ALIAS . '_structure'    => json_encode($this->nestedStructure()),
+            self::ALIAS . '_translations' => ['sl' => '{}'],
+        ]);
+        $page = $this->page();
+        $widget = $this->widget($page);
+
+        // The box's form: its bricks field is a nested SharedBricks with the default language's bricks
+        $box = (new \ReflectionProperty(\Backend\FormWidgets\Repeater::class, 'formWidgets'))->getValue($widget)[0];
+        $inner = $box->fields['inner'];
+
+        $this->assertSame(FieldBuilder::SHARED_WIDGET, $inner['type']);
+        $this->assertSame('Words', $inner[SharedBricks::NESTED_OPTION]['structure'][0]['quote']);
+        $this->assertArrayNotHasKey('_bricks_nothing', $box->fields, 'a container has something to translate inside');
+
+        $field = new FormField('viewBag[bricks][0][inner]', 'Inner');
+        $field->value = post('viewBag.bricks.0.inner');
+        $nested = new SharedBricks($widget->getController(), $field, $inner + [
+            'model'      => $page,
+            'alias'      => 'nested',
+            'parentForm' => $box,
+        ]);
+        $this->assertTrue($nested->isTranslating());
+
+        $quote = (new \ReflectionMethod(SharedBricks::class, 'makeItemFormWidget'))->invoke($nested, 0, 'quote');
+        $this->assertSame('Words', $quote->fields['quote']['placeholder']);
+        $this->assertTrue($quote->fields['author']['readOnly']);
+        $this->assertArrayNotHasKey(FieldBuilder::HIDDEN_FIELD, $quote->fields);
+
+        $saved = $widget->getSaveValue(post('viewBag.bricks'));
+
+        $this->assertSame($this->nestedStructure(), $saved, 'the structure, nested bricks included, comes from the default language');
+        $this->assertSame(
+            ['b1' => ['title' => 'Škatla'], 'q1' => ['quote' => 'Besede']],
+            $page->getTranslateAttributes('sl')['viewBag']['bricks_translations'],
+        );
+    }
+
+    public function testSavingInTheDefaultLanguageGivesNestedBricksIdsAndKeepsTheirTranslations(): void
+    {
+        $this->postForm([
+            'viewBag'                     => ['bricks' => [
+                ['_group' => 'box', '_id' => 'b1', 'title' => 'Box', 'inner' => [
+                    ['_group' => 'quote', '_id' => 'q1', 'quote' => 'Words', 'author' => 'Ann'],
+                    ['_group' => 'text', 'content' => '<p>New</p>'],
+                ]],
+            ]],
+            self::ALIAS . '_locale'       => 'en',
+            self::ALIAS . '_translations' => ['sl' => '{"q1":{"quote":"Besede"},"b1":{"title":"Škatla"}}'],
+        ]);
+        $page = $this->page();
+
+        $structure = $this->widget($page)->getSaveValue(post('viewBag.bricks'));
+
+        $this->assertTrue(BrickIds::isValid($structure[0]['inner'][1]['_id'] ?? null), 'a new nested brick gets its id now');
+        $this->assertSame(
+            ['b1' => ['title' => 'Škatla'], 'q1' => ['quote' => 'Besede']],
+            $page->getTranslateAttributes('sl')['viewBag']['bricks_translations'],
+        );
+    }
+
+    public function testTranslatingAContainerTranslatesTheBricksInside(): void
+    {
+        require_once $this->fixturePath('providers/FakeProvider.php');
+        config(['winter.translate::providers' => [
+            'fake' => ['class' => \NumenCode\Bricks\Tests\Fixtures\Providers\FakeProvider::class, 'key' => 'test'],
+        ]]);
+
+        $this->postForm([
+            'viewBag'                     => ['bricks' => [
+                ['_group' => 'box', '_id' => 'b1', 'title' => '', 'inner' => [
+                    ['_group' => 'quote', '_id' => 'q1', 'quote' => 'Prej'],
+                    ['_group' => 'spacer', '_id' => 's1'],
+                ]],
+            ]],
+            self::ALIAS . '_locale'       => 'sl',
+            self::ALIAS . '_structure'    => json_encode($this->nestedStructure()),
+            self::ALIAS . '_translations' => ['sl' => '{"q1":{"quote":"Prej"}}'],
+            '_bricks_translate'           => 'b1',
+            '_provider'                   => 'fake',
+        ]);
+
+        $translations = $this->renderedTranslations($this->widget($this->page())->onTranslateBricks());
+
+        $this->assertSame(['b1' => ['title' => '[sl from en] Box'], 'q1' => ['quote' => '[sl from en] Words']], $translations);
     }
 
     public function testWithoutAProviderNothingIsTranslated(): void

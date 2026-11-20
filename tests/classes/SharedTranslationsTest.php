@@ -110,4 +110,55 @@ class SharedTranslationsTest extends BricksTestCase
         $this->assertSame('heading', $merged[0]['_group']);
         $this->assertSame('h1', $merged[0]['_id']);
     }
+
+    /**
+     * A box (title translatable) holding a heading, and a gallery-like repeater whose items have no id.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    protected function nestedStructure(): array
+    {
+        return [
+            ['_group' => 'box', '_id' => 'b1', 'title' => 'Box', 'inner' => [
+                ['_group' => 'heading', '_id' => 'h2', 'text' => 'Inside', 'level' => 'h3'],
+            ], 'images' => [['_group' => 'heading', 'text' => 'No id']]],
+        ];
+    }
+
+    public function testNestedBricksAreInTheSameMap(): void
+    {
+        $translatable = $this->translatable + ['box' => ['title']];
+
+        $this->assertSame(
+            ['b1' => ['title' => 'Škatla'], 'h2' => ['text' => 'Notri']],
+            SharedTranslations::extract([
+                ['_group' => 'box', '_id' => 'b1', 'title' => 'Škatla', 'inner' => [
+                    '3' => ['_group' => 'heading', '_id' => 'h2', 'text' => 'Notri', 'level' => 'h1'],
+                ]],
+            ], $translatable),
+            'posted nested items (repeater indexes as keys)',
+        );
+
+        $this->assertSame(
+            ['h2' => ['text' => 'Notri']],
+            SharedTranslations::clean(['h2' => ['text' => 'Notri', 'level' => 'h1'], 'gone' => ['text' => 'X']], $this->nestedStructure(), $translatable),
+        );
+
+        $merged = SharedTranslations::merge($this->nestedStructure(), ['b1' => ['title' => 'Škatla'], 'h2' => ['text' => 'Notri']]);
+
+        $this->assertSame('Škatla', $merged[0]['title']);
+        $this->assertSame('Notri', $merged[0]['inner'][0]['text']);
+        $this->assertSame('h3', $merged[0]['inner'][0]['level']);
+        $this->assertSame('No id', $merged[0]['images'][0]['text'], 'items without an id are left as they are');
+
+        $editor = SharedTranslations::merge($this->nestedStructure(), [], $translatable, false);
+        $this->assertSame('', $editor[0]['inner'][0]['text'], 'untranslated nested fields are emptied in the editor too');
+    }
+
+    public function testNestedListsAreValuesHoldingBricks(): void
+    {
+        $this->assertSame(['inner', 'images'], array_keys(SharedTranslations::nestedLists($this->nestedStructure()[0])));
+        $this->assertSame([], SharedTranslations::nestedLists(['_group' => 'x', 'tags' => ['a', 'b'], 'empty' => [], 'mixed' => [['_group' => 'y'], 'z']]));
+        $this->assertSame(['b1', 'h2', null], array_map(fn ($brick) => $brick['_id'] ?? null, SharedTranslations::flatten($this->nestedStructure())));
+    }
 }
