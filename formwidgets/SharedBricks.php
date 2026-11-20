@@ -35,6 +35,13 @@ class SharedBricks extends Repeater
 {
     public const SWITCH_HANDLER = 'onSwitchBricksLocale';
 
+    public const TRANSLATE_HANDLER = 'onTranslateBricks';
+
+    /**
+     * The value of _bricks_translate for every brick (else a brick id).
+     */
+    public const TRANSLATE_ALL = '*';
+
     /**
      * Brick form fields left out while translating (options of the structure, not of the language).
      */
@@ -118,6 +125,8 @@ class SharedBricks extends Repeater
         $this->vars['structureJson'] = $this->isTranslating() ? $this->json($this->structure) : '';
         $this->vars['translationsJson'] = array_map(fn ($map) => $this->json($map), $this->translations);
         $this->vars['switchHandler'] = $this->getEventHandler(self::SWITCH_HANDLER);
+        $this->vars['translateHandler'] = $this->getEventHandler(self::TRANSLATE_HANDLER);
+        $this->vars['providers'] = $this->isTranslating() ? static::providers() : [];
 
         return $this->makePartial('sharedbricks');
     }
@@ -169,6 +178,104 @@ class SharedBricks extends Repeater
         $this->showItems($this->translationItems ?? $structure);
 
         return ['#' . $this->getId('shared') => $this->render()];
+    }
+
+    /**
+     * Machine-translates the default language's values into the language shown, with a Winter.Translate provider
+     * (posted: _provider; _bricks_translate = a brick id – all its translatable fields – or TRANSLATE_ALL – the
+     * empty translatable fields of every brick).
+     *
+     * @return array<string, string>
+     * @throws ApplicationException
+     */
+    public function onTranslateBricks(): array
+    {
+        $providers = static::providers();
+        $provider = (string) post('_provider');
+        $provider = isset($providers[$provider]) ? $provider : (string) array_key_first($providers);
+
+        if (!$this->isTranslating() || $provider === '') {
+            throw new ApplicationException(Lang::get('numencode.bricks::lang.shared.no_provider'));
+        }
+
+        [$structure, $translations] = $this->collect(post($this->formField->getName()) ?: []);
+        $target = (string) post('_bricks_translate');
+        $map = $translations[$this->activeLocale] ?? [];
+        $sources = [];
+
+        foreach ($structure as $brick) {
+            $id = (string) ($brick[FieldBuilder::ID_FIELD] ?? '');
+
+            if ($target !== self::TRANSLATE_ALL && $target !== $id) {
+                continue;
+            }
+
+            foreach ($this->translatable[(string) ($brick['_group'] ?? '')] ?? [] as $field) {
+                $value = $brick[$field] ?? null;
+
+                // "All" keeps what is already translated; one brick is translated again
+                if (!is_string($value) || SharedTranslations::isEmpty($value)) {
+                    continue;
+                }
+
+                if ($target === self::TRANSLATE_ALL && !SharedTranslations::isEmpty($map[$id][$field] ?? null)) {
+                    continue;
+                }
+
+                $sources[] = [$id, $field, $value];
+            }
+        }
+
+        if ($sources) {
+            try {
+                $translated = \Winter\Translate\Providers\ProviderFactory::create($provider)->translate(
+                    array_column($sources, 2),
+                    $this->activeLocale,
+                    $this->defaultLocale,
+                );
+            } catch (\Throwable $exception) {
+                throw new ApplicationException(Lang::get('numencode.bricks::lang.shared.translate_failed', [
+                    'message' => $exception->getMessage(),
+                ]));
+            }
+
+            foreach ($sources as $index => [$id, $field]) {
+                if (is_string($translated[$index] ?? null)) {
+                    $map[$id][$field] = $translated[$index];
+                }
+            }
+        }
+
+        $this->structure = $structure;
+        $this->translations = $translations;
+        $this->translations[$this->activeLocale] = SharedTranslations::clean($map, $structure, $this->translatable);
+        $this->translationItems = SharedTranslations::merge($structure, $this->translations[$this->activeLocale], $this->translatable, false);
+
+        $this->showItems($this->translationItems);
+
+        return ['#' . $this->getId('shared') => $this->render()];
+    }
+
+    /**
+     * Winter.Translate's machine translation providers that can translate (with an API key): name => label.
+     *
+     * @return array<string, string>
+     */
+    public static function providers(): array
+    {
+        if (!class_exists(\Winter\Translate\Providers\ProviderFactory::class)) {
+            return [];
+        }
+
+        $providers = [];
+
+        foreach ((array) \Config::get('winter.translate::providers', []) as $name => $config) {
+            if (is_array($config) && !empty($config['key'])) {
+                $providers[(string) $name] = (string) ($config['label'] ?? Str::title((string) $name));
+            }
+        }
+
+        return $providers;
     }
 
     public function isTranslating(): bool

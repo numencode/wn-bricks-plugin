@@ -194,4 +194,78 @@ class SharedBricksTest extends BricksTestCase
             $page->getTranslateAttributes('sl')['viewBag']['bricks_translations'],
         );
     }
+
+    /**
+     * A page shown in Slovenian with two quotes: q1 already translated, q2 not.
+     */
+    protected function translatingForm(array $extra = []): void
+    {
+        require_once $this->fixturePath('providers/FakeProvider.php');
+        \NumenCode\Bricks\Tests\Fixtures\Providers\FakeProvider::$calls = [];
+        config(['winter.translate::providers' => [
+            'fake'   => ['class' => \NumenCode\Bricks\Tests\Fixtures\Providers\FakeProvider::class, 'key' => 'test'],
+            'nokey'  => ['class' => \NumenCode\Bricks\Tests\Fixtures\Providers\FakeProvider::class, 'key' => ''],
+        ]]);
+
+        $structure = [
+            ['_group' => 'quote', '_id' => 'q1', 'quote' => 'First', 'author' => 'Ann'],
+            ['_group' => 'quote', '_id' => 'q2', 'quote' => 'Second', 'author' => 'Bob'],
+        ];
+
+        $this->postForm($extra + [
+            'viewBag'                     => ['bricks' => [
+                ['_group' => 'quote', '_id' => 'q1', 'quote' => 'Prvi'],
+                ['_group' => 'quote', '_id' => 'q2', 'quote' => ''],
+            ]],
+            self::ALIAS . '_locale'       => 'sl',
+            self::ALIAS . '_structure'    => json_encode($structure),
+            self::ALIAS . '_translations' => ['sl' => '{}'],
+        ]);
+    }
+
+    /**
+     * @return array<string, array<string, mixed>> The language's translations in the re-rendered lockers
+     */
+    protected function renderedTranslations(array $response): array
+    {
+        preg_match('/name="' . self::ALIAS . '_translations\[sl\]" value="([^"]*)"/', reset($response), $match);
+
+        return json_decode(html_entity_decode($match[1] ?? '{}', ENT_QUOTES), true);
+    }
+
+    public function testOnlyProvidersWithAKeyAreOffered(): void
+    {
+        $this->translatingForm();
+
+        $this->assertSame(['fake' => 'Fake'], SharedBricks::providers());
+    }
+
+    public function testTranslatingAllFillsOnlyTheEmptyFields(): void
+    {
+        $this->translatingForm(['_bricks_translate' => SharedBricks::TRANSLATE_ALL, '_provider' => 'fake']);
+
+        $translations = $this->renderedTranslations($this->widget($this->page())->onTranslateBricks());
+
+        $this->assertSame(['q1' => ['quote' => 'Prvi'], 'q2' => ['quote' => '[sl from en] Second']], $translations);
+        $this->assertSame([['Second']], \NumenCode\Bricks\Tests\Fixtures\Providers\FakeProvider::$calls, 'one request, untranslatable fields left out');
+    }
+
+    public function testTranslatingOneBrickReplacesItsTranslation(): void
+    {
+        $this->translatingForm(['_bricks_translate' => 'q1', '_provider' => 'fake']);
+
+        $translations = $this->renderedTranslations($this->widget($this->page())->onTranslateBricks());
+
+        $this->assertSame(['q1' => ['quote' => '[sl from en] First']], $translations);
+    }
+
+    public function testWithoutAProviderNothingIsTranslated(): void
+    {
+        $this->translatingForm(['_bricks_translate' => SharedBricks::TRANSLATE_ALL]);
+        config(['winter.translate::providers' => []]);
+
+        $this->expectException(\Winter\Storm\Exception\ApplicationException::class);
+
+        $this->widget($this->page())->onTranslateBricks();
+    }
 }

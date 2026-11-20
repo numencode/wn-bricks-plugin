@@ -321,6 +321,16 @@
             .attr('title', labels.hide || 'Hide')
             .append('<i class="icon-eye"></i>')
             .appendTo($actions);
+
+        // A shared structure shown in another language, with a machine translation service: translate this brick
+        var $shared = $item.closest('[data-translate-handler]');
+
+        if ($shared.length && !$item.find('[data-field-name="_bricks_nothing"]').length) {
+            $('<button type="button" class="bricks-item-action" data-bricks-action="translate">')
+                .attr('title', $shared.attr('data-translate-label') || 'Translate')
+                .append('<i class="icon-language"></i>')
+                .appendTo($actions);
+        }
     }
 
     //
@@ -985,6 +995,49 @@
 
         $button.request($shared.attr('data-switch-handler'), {
             data: { _bricks_locale: locale },
+        });
+    });
+
+    // Machine translation: every brick's empty fields ("*"), or one brick (its id)
+    function translateBricks($element, target) {
+        var $shared = $element.closest('[data-shared-bricks]');
+
+        $element.request($shared.attr('data-translate-handler'), {
+            data: {
+                _bricks_translate: target,
+                _provider: $shared.find('[data-bricks-provider]').first().val() || '',
+            },
+        });
+    }
+
+    $(document).on('click', '[data-shared-bricks] [data-bricks-translate]', function (ev) {
+        ev.preventDefault();
+        translateBricks($(this), $(this).attr('data-bricks-translate'));
+    });
+
+    $(document).on('click', '[data-bricks] .bricks-item-actions [data-bricks-action="translate"]', function (ev) {
+        var $item = $(this).closest('.field-repeater-item'),
+            name = String(hiddenGroupInput($item).attr('name') || ''),
+            id = $item.find('input[name="' + name.slice(0, -'[_group]'.length) + '[_id]"]').val();
+
+        ev.preventDefault();
+        ev.stopPropagation();
+
+        if (id) {
+            translateBricks($(this), id);
+        }
+    });
+
+    // NumenCode.Fundamentals' form language selector switches the form's shared bricks fields too
+    $(document).on('change', '[data-translate-locale]', function () {
+        var locale = $(this).val();
+
+        $(this).closest('form').find('[data-shared-bricks]').each(function () {
+            var $button = $(this).find('[data-bricks-locale="' + locale + '"]').first();
+
+            if ($button.length && !$button.hasClass('active')) {
+                $button.trigger('click');
+            }
         });
     });
 

@@ -271,3 +271,14 @@ div.form-group.bricks-preview[data-field-name="_preview"] div[data-control="page
 .bricks-shared.is-translating .bricks-item-action[data-bricks-action="hide"] {
     display: none !important;
 }
+.bricks-machine-translation {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 12px;
+}
+.bricks-machine-translation > select {
+    width: auto;
+    height: 24px;
+    padding: 0 6px;
+}
