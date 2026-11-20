@@ -162,4 +162,35 @@ class BrickRendererTest extends BricksTestCase
         // No SL file → the default list
         $this->assertStringContainsString('<p>About text</p>', $this->section($this->render('/about'), 'main'));
     }
+
+    public function testASharedStructureRendersTheDefaultListInTheDefaultLanguage(): void
+    {
+        $main = $this->section($this->render('/shared'), 'main');
+
+        $this->assertStringContainsString('<p>English text</p>', $main);
+        $this->assertStringContainsString('English quote', $main);
+        $this->assertStringContainsString('Hello Shared', $main);
+    }
+
+    /**
+     * @runInSeparateProcess
+     * @preserveGlobalState disabled
+     */
+    public function testASharedStructureMergesTheTranslationsPerField(): void
+    {
+        if (!class_exists(\Winter\Translate\Classes\Translator::class)) {
+            $this->markTestSkipped('Winter.Translate is not installed.');
+        }
+
+        \Winter\Translate\Models\Locale::create(['code' => 'sl', 'name' => 'Slovenščina', 'is_enabled' => true]);
+        \Winter\Translate\Classes\Translator::instance()->setLocale('sl', false);
+
+        $main = $this->section($this->render('/shared'), 'main');
+
+        $this->assertStringContainsString('<p>Slovensko besedilo</p>', $main, 'translated field');
+        $this->assertStringContainsString('English quote', $main, 'untranslated field: the default value');
+        $this->assertStringContainsString('Ann', $main, 'a stored translation of a non-translatable field is ignored');
+        $this->assertStringNotContainsString('old SL list', $main, "the language's own list is ignored");
+        $this->assertStringContainsString('Hello Shared', $main, 'the structure, component bricks included');
+    }
 }

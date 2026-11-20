@@ -12,6 +12,7 @@ use Cms\Classes\Theme;
 use Event;
 use Illuminate\Database\Schema\Blueprint;
 use NumenCode\Bricks\Classes\BrickRegistry;
+use NumenCode\Bricks\Classes\BrickRenderer;
 use NumenCode\Bricks\Classes\ModelHost;
 use NumenCode\Bricks\Classes\ModelIntegration;
 use NumenCode\Bricks\Classes\PermissionGuard;
@@ -214,5 +215,36 @@ class ModelIntegrationTest extends BricksTestCase
         $this->assertStringContainsString('<one><p class="greeting">Hello Ana (brick_post_0)</p><div class="brick brick--text">', str_replace(["\n", '    '], '', $html));
         $this->assertStringContainsString('<two><p class="greeting">Hello Ana (brick_post_0_2)</p>', $html);
         $this->assertSame(['Ana', 'Ana'], Greeting::$runs);
+    }
+
+    public function testAModelsSharedStructureIsRenderedInItsLanguage(): void
+    {
+        $record = Record::create([
+            'title' => 'Post',
+            'aside' => [
+                ['content' => '<p>English</p>', '_group' => 'text', '_id' => 't1'],
+                ['quote' => 'Words', 'author' => 'Ann', '_group' => 'quote', '_id' => 'q1'],
+            ],
+        ]);
+        $record->setAttributeTranslated('aside_translations', ['t1' => ['content' => '<p>Slovensko</p>'], 'q1' => ['author' => 'X']], 'sl');
+        $record->save();
+
+        $record = Record::find($record->id);
+        $this->assertSame('<p>English</p>', BrickRenderer::modelBricks($record, 'aside', $this->theme)[0]['content']);
+
+        $record->translateContext('sl');
+        $bricks = BrickRenderer::modelBricks($record, 'aside', $this->theme);
+
+        $this->assertSame('<p>Slovensko</p>', $bricks[0]['content']);
+        $this->assertSame('Words', $bricks[1]['quote'], 'untranslated: the default value');
+        $this->assertSame('Ann', $bricks[1]['author'], 'not translatable: ignored');
+    }
+
+    public function testAModelsTranslatedListIsRenderedAsItIs(): void
+    {
+        $record = $this->record();
+        $record->translateContext('sl');
+
+        $this->assertSame([['html' => '<i>SL</i>', '_group' => 'html']], BrickRenderer::modelBricks($record, 'bricks', $this->theme));
     }
 }

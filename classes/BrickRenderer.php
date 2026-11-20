@@ -42,18 +42,26 @@ class BrickRenderer
 
     /**
      * Twig: renderBricks() / renderBricks('aside') renders a bricks field of the current static page;
-     * renderBricks(list) / renderBricks(list, 'name') renders a list, e.g. a model's (renderBricks(post.bricks, 'post'));
-     * the name keeps its component bricks apart from the page's own ("bricks" = the page's field).
+     * renderBricks(post, 'bricks') renders a model's bricks field in the visitor's language (with the translations of a
+     * shared structure); renderBricks(list) / renderBricks(list, 'name') renders a list (renderBricks(post.bricks,
+     * 'post')). The name (a model's: the attribute, or a third argument) keeps its component bricks apart from the
+     * page's own ("bricks" = the page's field).
      *
-     * @param string|array<int, array<string, mixed>>|null $bricks
+     * @param string|array<int, array<string, mixed>>|object|null $bricks
      */
-    public static function renderBricksFunction(string|array|null $bricks = null, ?string $name = null): string
+    public static function renderBricksFunction(string|array|object|null $bricks = null, ?string $name = null, ?string $alias = null): string
     {
         if (!$controller = Controller::getController()) {
             return '';
         }
 
         $renderer = new static($controller);
+
+        if (is_object($bricks)) {
+            $field = $name ?? self::DEFAULT_FIELD;
+
+            return $renderer->renderList(static::modelBricks($bricks, $field, $controller->getTheme()), $alias ?? $field);
+        }
 
         return is_array($bricks)
             ? $renderer->renderList($bricks, $name ?? self::DEFAULT_FIELD)
@@ -221,8 +229,70 @@ class BrickRenderer
      */
     public static function bricks(Page $staticPage, string $field): array
     {
-        $bricks = $staticPage->viewBag[$field] ?? [];
+        // A shared structure: the default language's list (a language's own list is ignored) with the visitor's
+        // language's translations (merged into the viewBag by Winter.Translate)
+        if (in_array($field, static::sharedFieldNames($staticPage), true)) {
+            $structure = ((array) ($staticPage->attributes['viewBag'] ?? []))[$field] ?? [];
 
+            return SharedTranslations::merge(
+                static::listOf($structure),
+                $staticPage->viewBag[FieldBuilder::translationsKey($field)] ?? [],
+                static::translatableFields($staticPage->getThemeAttribute()),
+            );
+        }
+
+        return static::listOf($staticPage->viewBag[$field] ?? []);
+    }
+
+    /**
+     * A model's bricks field in the model's language: its list (translated, when the list is translatable), with the
+     * translations of a shared structure (the attribute <field>_translations, stored by Winter.Translate).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public static function modelBricks(object $model, string $field, ?\Cms\Classes\Theme $theme = null): array
+    {
+        $bricks = static::listOf(BrickHost::decode($model->{$field} ?? null));
+
+        if (
+            !method_exists($model, 'isClassExtendedWith')
+            || !$model->isClassExtendedWith('Winter.Translate.Behaviors.TranslatableModel')
+        ) {
+            return $bricks;
+        }
+
+        $locale = $model->translateContext();
+
+        if ($locale === \Winter\Translate\Classes\Translator::instance()->getDefaultLocale()) {
+            return $bricks;
+        }
+
+        $map = $model->getAttributeTranslated(FieldBuilder::translationsKey($field), $locale);
+
+        return $map ? SharedTranslations::merge($bricks, BrickHost::decode($map), static::translatableFields($theme)) : $bricks;
+    }
+
+    /**
+     * The translatable fields of every brick type (code => field names).
+     *
+     * @return array<string, array<int, string>>
+     */
+    public static function translatableFields(?\Cms\Classes\Theme $theme = null): array
+    {
+        $fields = [];
+
+        foreach (BrickRegistry::instance()->all($theme) as $code => $type) {
+            $fields[$code] = $type->isComponent() ? [] : SharedTranslations::translatableFields($type->fields);
+        }
+
+        return $fields;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    protected static function listOf(mixed $bricks): array
+    {
         return is_array($bricks) ? array_values(array_filter($bricks, 'is_array')) : [];
     }
 

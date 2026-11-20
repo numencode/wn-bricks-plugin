@@ -347,7 +347,8 @@ A component brick's markup is the component's own; with an anchor or CSS class i
 |---|---|
 | `{{ renderBricks() }}` | The current static page's `bricks` field. |
 | `{{ renderBricks('aside') }}` | Another bricks field of the page. |
-| `{{ renderBricks(list, 'name') }}` | A list of bricks from elsewhere, e.g. a model's: `renderBricks(post.bricks, 'post')`. The name keeps its component bricks apart from the page's. |
+| `{{ renderBricks(post, 'bricks') }}` | A model's bricks field, in the visitor's language (also with a shared structure, `translation: fields`). |
+| `{{ renderBricks(list, 'name') }}` | A list of bricks from elsewhere: `renderBricks(post.bricks, 'post')`. The name keeps its component bricks apart from the page's. |
 | `{{ renderBrick(brick, index, field) }}` | One brick, e.g. in `{% for brick in bricks %}{{ renderBrick(brick, loop.index0) }}{% endfor %}`. |
 | `{{ url\|bricksVideoUrl }}` | The embed URL of a YouTube (youtube-nocookie.com) or Vimeo video, or empty. |
 
@@ -384,7 +385,7 @@ tabs:
 ```
 
 ```twig
-{{ renderBricks(project.bricks, 'project') }}
+{{ renderBricks(project, 'bricks') }}
 ```
 
 The field offers the active theme's brick types and works like on static pages: "Add brick", the editor's actions,
