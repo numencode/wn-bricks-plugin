@@ -7,3 +7,4 @@ static-pages:
     hidden: {  }
     advanced: {  }
     shared: {  }
+    nested: {  }

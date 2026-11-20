@@ -1,0 +1,25 @@
+[viewBag]
+title = "Nested"
+url = "/nested"
+layout = "bricks"
+is_hidden = 0
+navigation_hidden = 0
+bricks[0][_group] = "box"
+bricks[0][_id] = "b1"
+bricks[0][title] = "Outer"
+bricks[0][inner][0][_group] = "greeting"
+bricks[0][inner][0][_id] = "g1"
+bricks[0][inner][0][name] = "Inside"
+bricks[0][inner][1][_group] = "text"
+bricks[0][inner][1][_id] = "t1"
+bricks[0][inner][1][content] = "<p>Hidden child</p>"
+bricks[0][inner][1][_hidden] = "1"
+bricks[0][inner][2][_group] = "text"
+bricks[0][inner][2][_id] = "t2"
+bricks[0][inner][2][content] = "<p>Child text</p>"
+bricks[1][_group] = "box"
+bricks[1][_hidden] = "1"
+bricks[1][title] = "Hidden box"
+bricks[1][inner][0][_group] = "greeting"
+bricks[1][inner][0][name] = "Never"
+==

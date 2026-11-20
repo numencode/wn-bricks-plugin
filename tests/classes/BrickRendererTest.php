@@ -6,6 +6,7 @@ namespace NumenCode\Bricks\Tests\Classes;
 
 use Cms\Classes\Controller;
 use Cms\Classes\Theme;
+use NumenCode\Bricks\Classes\BrickRegistry;
 use NumenCode\Bricks\Classes\BrickRenderer;
 use NumenCode\Bricks\Tests\BricksTestCase;
 use NumenCode\Bricks\Tests\Fixtures\Components\Greeting;
@@ -192,5 +193,56 @@ class BrickRendererTest extends BricksTestCase
         $this->assertStringContainsString('Ann', $main, 'a stored translation of a non-translatable field is ignored');
         $this->assertStringNotContainsString('old SL list', $main, "the language's own list is ignored");
         $this->assertStringContainsString('Hello Shared', $main, 'the structure, component bricks included');
+    }
+
+    protected function registerBox(): void
+    {
+        BrickRegistry::instance()->registerCallback(
+            fn (BrickRegistry $registry) => $registry->registerBricks(['box' => $this->fixturePath('bricks/box')], 'Test'),
+        );
+    }
+
+    public function testNestedBricksRenderInsideTheirBrick(): void
+    {
+        $this->registerBox();
+        $main = $this->section($this->render('/nested'), 'main');
+
+        $this->assertStringContainsString('<div class="box"><h3>Outer</h3>', $main);
+        $this->assertStringContainsString('<div class="brick brick--text"><p>Child text</p></div>', $main);
+        $this->assertStringNotContainsString('Hidden', $main, 'hidden bricks, also with their nested bricks');
+
+        // brick.lists: the children that show something
+        $this->assertStringContainsString('<ol><li>greeting:0:g1</li><li>text:2:t2</li></ol>', $main);
+    }
+
+    public function testComponentBricksInsideBricksGetAliasesWithTheirPath(): void
+    {
+        $this->registerBox();
+        $main = $this->section($this->render('/nested'), 'main');
+
+        $this->assertStringContainsString('<p class="greeting">Hello Inside (brick_bricks_0_inner_0)</p>', $main);
+        $this->assertSame(['Inside'], Greeting::$runs, 'added to the page once; not for a hidden container');
+        $this->assertSame('bricks.0.inner', BrickRenderer::path('bricks', 0, 'inner'));
+    }
+
+    public function testThePreviewMarksNestedBricksWithTheirPath(): void
+    {
+        $this->registerBox();
+        $controller = new Controller(Theme::getActiveTheme());
+        $controller->run('/empty');
+
+        $html = (new BrickRenderer($controller))->renderList([
+            ['_group' => 'box', 'title' => 'Box', 'inner' => [
+                ['_group' => 'text', 'content' => '<p>Hidden</p>', '_hidden' => '1'],
+                ['_group' => 'text', 'content' => '<p>B</p>'],
+            ]],
+        ], 'bricks', true);
+
+        $this->assertStringContainsString('<span data-bricks-preview="bricks:0" hidden></span><div class="box">', $html);
+        $this->assertMatchesRegularExpression('#<span data-bricks-preview="bricks.0.inner:1" hidden></span>\s*<div class="brick brick--text"><p>B</p></div>\s*<span data-bricks-preview-end hidden></span>#', $html);
+        $this->assertSame(2, substr_count($html, 'data-bricks-preview-end'));
+
+        $plain = (new BrickRenderer($controller))->renderList([['_group' => 'box', 'inner' => [['_group' => 'text', 'content' => 'C']]]]);
+        $this->assertStringNotContainsString('data-bricks-preview', $plain);
     }
 }

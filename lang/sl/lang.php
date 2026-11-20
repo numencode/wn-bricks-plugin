@@ -68,7 +68,7 @@ return [
         ],
         'columns' => [
             'name'        => 'Stolpci',
-            'description' => 'Dva ali trije stolpci oblikovanega besedila.',
+            'description' => 'Dva ali trije stolpci gradnikov.',
         ],
         'button'  => [
             'name'        => 'Gumb',
@@ -117,6 +117,7 @@ return [
         'column_1'            => '1. stolpec',
         'column_2'            => '2. stolpec',
         'column_3'            => '3. stolpec',
+        'column_prompt'       => 'Dodaj gradnik v stolpec',
         'button_text'         => 'Besedilo gumba',
         'url'                 => 'Povezava',
         'url_comment'         => 'Naslov strani (npr. /kontakt) ali celoten URL (https://...).',

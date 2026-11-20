@@ -198,24 +198,44 @@ class ComponentBricks
             return;
         }
 
+        foreach (BrickRenderer::fieldNames($staticPage) as $field) {
+            static::addListComponents($controller, BrickRenderer::bricks($staticPage, $field), $field);
+        }
+    }
+
+    /**
+     * Adds the components of a list's component bricks, also those inside other bricks (not inside hidden ones).
+     *
+     * @param array<int, array<string, mixed>> $bricks
+     * @param string $field The list's name (a nested list's: its path, BrickRenderer::path())
+     */
+    protected static function addListComponents(Controller $controller, array $bricks, string $field): void
+    {
         $registry = BrickRegistry::instance();
 
-        foreach (BrickRenderer::fieldNames($staticPage) as $field) {
-            foreach (BrickRenderer::bricks($staticPage, $field) as $index => $brick) {
-                $type = $registry->get((string) ($brick['_group'] ?? ''), $controller->getTheme());
+        foreach ($bricks as $index => $brick) {
+            $type = $registry->get((string) ($brick['_group'] ?? ''), $controller->getTheme());
 
-                if (!$type?->isComponent() || BrickRenderer::isHidden($brick)) {
-                    continue;
-                }
+            if (!$type || BrickRenderer::isHidden($brick)) {
+                continue;
+            }
 
+            if ($type->isComponent()) {
                 $properties = array_diff_key($brick, array_flip(BrickType::RESERVED_FIELDS));
                 $controller->addComponent($type->component, static::alias($field, $index), $properties, true);
+
+                continue;
+            }
+
+            foreach (array_keys($type->bricksFields()) as $name) {
+                static::addListComponents($controller, BrickRenderer::listOf($brick[$name] ?? []), BrickRenderer::path($field, $index, $name));
             }
         }
     }
 
     /**
-     * The alias of a component brick's component on the CMS page.
+     * The alias of a component brick's component on the CMS page, e.g. brick_bricks_2 or (nested)
+     * brick_bricks_2_column_1_0.
      */
     public static function alias(string $field, int $index): string
     {

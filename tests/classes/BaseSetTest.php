@@ -74,14 +74,14 @@ class BaseSetTest extends BricksTestCase
         $this->assertHtmlContains('<figcaption class="brick__caption">Two</figcaption>');
     }
 
-    public function testColumns(): void
+    public function testColumnsHoldBricks(): void
     {
         $this->assertHtmlContains(
-            '<div class="brick brick--columns brick--columns-3"> <div class="brick__column"><p>First</p></div> <div class="brick__column"><p>Second</p></div> <div class="brick__column"><p>Third</p></div> </div>',
+            '<div class="brick brick--columns brick--columns-3"> <div class="brick__column"><div class="brick brick--text"><p>First</p></div></div> <div class="brick__column"><div class="brick brick--text"><p>Second</p></div></div> <div class="brick__column"><div class="brick brick--text"><p>Third</p></div></div> </div>',
         );
 
         // An invalid count falls back to 2 columns
-        $this->assertHtmlContains('<div class="brick brick--columns brick--columns-2"> <div class="brick__column"><p>A</p></div> <div class="brick__column"><p>B</p></div> </div>');
+        $this->assertHtmlContains('<div class="brick brick--columns brick--columns-2"> <div class="brick__column"><div class="brick brick--text"><p>A</p></div></div> <div class="brick__column"><div class="brick brick--text"><p>B</p></div></div> </div>');
         $this->assertStringNotContainsString('Hidden', $this->html);
     }
 

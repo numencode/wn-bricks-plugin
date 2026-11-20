@@ -19,6 +19,11 @@ use Winter\Pages\Classes\Page;
  * to the page for a static page's field, else one created while rendering (e.g. a blog post's bricks:
  * renderBricks(post.bricks, 'post')) – its onRun() runs then, but its AJAX handlers can't be reached.
  * Bricks of unknown types are skipped (a warning is logged in debug mode).
+ *
+ * Bricks inside bricks (a type's `type: bricks` fields, e.g. the columns of Columns): each nested list is rendered
+ * before its brick; the field's variable is the HTML (`{{ column_1|raw }}`) and `brick.lists.<field>` the rendered
+ * children (html, code, id, index, values) for markup that places them itself (tabs, accordions). A nested list's
+ * name is its path, e.g. "bricks.2.column_1" (component aliases brick_bricks_2_column_1_0, preview markers).
  */
 class BrickRenderer
 {
@@ -35,6 +40,11 @@ class BrickRenderer
      * @var \WeakMap<Controller, array<string, bool>>|null
      */
     protected static ?\WeakMap $created = null;
+
+    /**
+     * Whether the bricks being rendered get preview markers (renderList()'s $markers, for the nested bricks too).
+     */
+    protected bool $markers = false;
 
     public function __construct(protected Controller $controller)
     {
@@ -122,6 +132,9 @@ class BrickRenderer
     public function renderList(array $bricks, string $field = self::DEFAULT_FIELD, bool $markers = false): string
     {
         $html = '';
+        // The bricks inside these bricks get markers too
+        $outer = $this->markers;
+        $this->markers = $markers;
 
         foreach (array_values($bricks) as $index => $brick) {
             if (!is_array($brick)) {
@@ -133,6 +146,8 @@ class BrickRenderer
             // In the editor's preview, bricks that show something get markers (nothing for hidden or empty bricks)
             $html .= $markers && trim($brickHtml) !== '' ? static::previewMarkers($brickHtml, $field, $index) : $brickHtml;
         }
+
+        $this->markers = $outer;
 
         return $html;
     }
@@ -204,6 +219,14 @@ class BrickRenderer
         }
 
         $vars = array_diff_key($brick, array_flip(BrickType::RESERVED_FIELDS));
+        $lists = [];
+
+        foreach (array_keys($type->bricksFields()) as $name) {
+            $children = $this->renderChildren(static::listOf($brick[$name] ?? []), static::path($field, $index, $name));
+            $vars[$name] = new \Twig\Markup(implode('', array_column($children, 'html')), 'UTF-8');
+            $lists[$name] = $children;
+        }
+
         $vars['brick'] = [
             'code'   => $code,
             'index'  => $index,
@@ -211,6 +234,7 @@ class BrickRenderer
             'id'     => (string) ($brick[FieldBuilder::ID_FIELD] ?? ''),
             'anchor' => $anchor,
             'class'  => $class,
+            'lists'  => $lists,
         ];
 
         // Check the theme partial first: renderPartial() keeps the merged variables when it returns false for a
@@ -220,6 +244,44 @@ class BrickRenderer
         }
 
         return $type->markupPath !== null ? $this->renderFile($type->markupPath, $vars) : '';
+    }
+
+    /**
+     * The name of a nested list: the path of its brick and field, e.g. "bricks.2.column_1".
+     */
+    public static function path(string $field, int $index, string $name): string
+    {
+        return $field . '.' . $index . '.' . $name;
+    }
+
+    /**
+     * The rendered bricks of a nested list that show something: html (with preview markers in the editor's preview),
+     * code, id, index and values (the brick's own fields).
+     *
+     * @param array<int, array<string, mixed>> $bricks
+     * @return array<int, array<string, mixed>>
+     */
+    protected function renderChildren(array $bricks, string $field): array
+    {
+        $children = [];
+
+        foreach ($bricks as $index => $brick) {
+            $html = $this->renderBrick($brick, $index, $field);
+
+            if (trim($html) === '') {
+                continue;
+            }
+
+            $children[] = [
+                'html'   => new \Twig\Markup($this->markers ? static::previewMarkers($html, $field, $index) : $html, 'UTF-8'),
+                'code'   => (string) ($brick['_group'] ?? ''),
+                'id'     => (string) ($brick[FieldBuilder::ID_FIELD] ?? ''),
+                'index'  => $index,
+                'values' => array_diff_key($brick, array_flip(BrickType::RESERVED_FIELDS)),
+            ];
+        }
+
+        return $children;
     }
 
     /**
@@ -291,7 +353,7 @@ class BrickRenderer
     /**
      * @return array<int, array<string, mixed>>
      */
-    protected static function listOf(mixed $bricks): array
+    public static function listOf(mixed $bricks): array
     {
         return is_array($bricks) ? array_values(array_filter($bricks, 'is_array')) : [];
     }

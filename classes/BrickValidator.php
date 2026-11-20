@@ -60,6 +60,13 @@ class BrickValidator
 
     protected ?Environment $twig = null;
 
+    /**
+     * The codes of all brick types (for the allow/ignore of nested bricks fields).
+     *
+     * @var array<int, string>
+     */
+    protected array $codes = [];
+
     public function __construct(protected Theme $theme)
     {
     }
@@ -73,6 +80,7 @@ class BrickValidator
         $this->checked = [];
 
         $sources = BrickRegistry::instance()->sources($this->theme);
+        $this->codes = array_map('strval', array_keys($sources));
 
         foreach ($sources as $code => $list) {
             foreach ($list as $source) {
@@ -216,7 +224,9 @@ class BrickValidator
             $label = $prefix . $name;
             $fieldType = $config['type'] ?? 'text';
 
-            if (!is_string($fieldType) || !$this->isFieldType($fieldType)) {
+            if ($fieldType === BrickType::BRICKS_FIELD_TYPE) {
+                $this->checkBricksField($code, $file, $label, $config, $prefix === '');
+            } elseif (!is_string($fieldType) || !$this->isFieldType($fieldType)) {
                 $this->error($code, $file, sprintf('the field "%s" has an unknown type "%s"', $label, is_string($fieldType) ? $fieldType : gettype($fieldType)));
             }
 
@@ -241,6 +251,33 @@ class BrickValidator
             foreach ((array) ($config['groups'] ?? []) as $group => $groupConfig) {
                 if (is_array($groupConfig['fields'] ?? null)) {
                     $this->checkFields($code, $file, $groupConfig['fields'], $label . '.' . $group . '.');
+                }
+            }
+        }
+    }
+
+    /**
+     * A nested bricks field (bricks inside bricks): only among the type's own fields (not inside a repeater's form);
+     * its allow/ignore name existing types; no "translation" option (nested bricks are translated with their brick).
+     *
+     * @param array<string, mixed> $config
+     */
+    protected function checkBricksField(string $code, string $file, string $label, array $config, bool $topLevel): void
+    {
+        if (!$topLevel) {
+            $this->error($code, $file, sprintf('the bricks field "%s" is inside another field; bricks fields must be fields of the brick itself', $label));
+
+            return;
+        }
+
+        if (array_key_exists(FieldBuilder::TRANSLATION_OPTION, $config)) {
+            $this->warning($code, $file, sprintf('the bricks field "%s" has a "%s" option, which is ignored: nested bricks are translated with their brick', $label, FieldBuilder::TRANSLATION_OPTION));
+        }
+
+        foreach (['allow', 'ignore'] as $option) {
+            foreach (FieldBuilder::codes($config[$option] ?? []) as $type) {
+                if (!in_array($type, $this->codes, true)) {
+                    $this->warning($code, $file, sprintf('"%s" of the bricks field "%s" names the brick type "%s", which doesn\'t exist', $option, $label, $type));
                 }
             }
         }

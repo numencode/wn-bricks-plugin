@@ -129,7 +129,7 @@ added, but existing ones are shown and saved unchanged.
 | Text | `text` | `content` (rich editor) |
 | Image | `image` | `image`, `alt`, `caption`, `width` (content, wide, full) |
 | Gallery | `gallery` | `images` (image, alt, caption), `columns` (2, 3, 4) |
-| Columns | `columns` | `columns` (2, 3), `column_1` … `column_3` (rich editor) |
+| Columns | `columns` | `columns` (2, 3), `column_1` … `column_3` (bricks inside: a list of bricks per column) |
 | Button | `button` | `text`, `url`, `style` (primary, secondary, link), `new_window` |
 | Quote | `quote` | `quote`, `author`, `source` |
 | Video | `video` | `url` (YouTube, embedded from youtube-nocookie.com, or Vimeo), `title` |

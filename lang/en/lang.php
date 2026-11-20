@@ -68,7 +68,7 @@ return [
         ],
         'columns' => [
             'name'        => 'Columns',
-            'description' => 'Two or three columns of formatted text.',
+            'description' => 'Two or three columns of bricks.',
         ],
         'button' => [
             'name'        => 'Button',
@@ -117,6 +117,7 @@ return [
         'column_1'            => 'Column 1',
         'column_2'            => 'Column 2',
         'column_3'            => 'Column 3',
+        'column_prompt'       => 'Add a brick to the column',
         'button_text'         => 'Button text',
         'url'                 => 'Link',
         'url_comment'         => 'A page address (e.g. /contact) or a full URL (https://...).',
