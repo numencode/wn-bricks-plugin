@@ -28,6 +28,13 @@ return [
         'notice' => 'Gradnikov v jeziku :locale še ni, zato spletna stran na tej strani prikazuje gradnike v jeziku :default.',
         'copy'   => 'Kopiraj gradnike (:default)',
     ],
+    'shared'      => [
+        'language'       => 'Jezik',
+        'translating'    => 'Prevajanje v jezik :locale. Gradniki so urejeni v jeziku :default; tu prevajate njihova besedila. Prazna polja na spletni strani prikažejo besedilo v jeziku :default.',
+        'default_value'  => ':locale: :value',
+        'nothing'        => 'Ta gradnik nima besedil za prevod.',
+        'unknown_locale' => 'Ta jezik ni omogočen.',
+    ],
     'unknown'     => [
         'name'        => 'Neznan gradnik (:code)',
         'description' => 'Vrsta tega gradnika ne obstaja več.',

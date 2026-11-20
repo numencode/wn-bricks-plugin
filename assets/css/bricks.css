@@ -237,3 +237,37 @@ div.form-group.bricks-preview[data-field-name="_preview"] div[data-control="page
     outline: none;
     box-shadow: none;
 }
+
+/* Shared structure (translation: fields): the language buttons, and the structure locked while translating */
+.bricks-locales {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0 0 10px;
+}
+.bricks-locales-label {
+    margin-right: 4px;
+    color: var(--wn-text-secondary, #555);
+    font-size: 12px;
+}
+.bricks-locales > .btn {
+    min-width: 34px;
+}
+.bricks-translating-notice {
+    margin: 0 0 10px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    background: var(--wn-border-subtle, #f3f5f7);
+    color: var(--wn-text-secondary, #555);
+    font-size: 12px;
+}
+.bricks-shared.is-translating .field-repeater-add-item,
+.bricks-shared.is-translating .repeater-item-remove,
+.bricks-shared.is-translating .repeater-item-handle,
+[data-bricks]:has(.bricks-shared.is-translating) .bricks-paste,
+[data-bricks]:has(.bricks-shared.is-translating) .bricks-paste-clear,
+.bricks-shared.is-translating .bricks-item-action[data-bricks-action="copy"],
+.bricks-shared.is-translating .bricks-item-action[data-bricks-action="duplicate"],
+.bricks-shared.is-translating .bricks-item-action[data-bricks-action="hide"] {
+    display: none !important;
+}

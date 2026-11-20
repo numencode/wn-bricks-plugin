@@ -968,6 +968,27 @@
     });
 
     //
+    // Shared structure (translation: fields, formwidgets/SharedBricks): the language buttons post the form to the
+    // switch handler, which renders the bricks in that language (and keeps the other values in hidden inputs).
+    //
+
+    $(document).on('click', '[data-shared-bricks] [data-bricks-locale]', function (ev) {
+        var $button = $(this),
+            $shared = $button.closest('[data-shared-bricks]'),
+            locale = $button.attr('data-bricks-locale');
+
+        ev.preventDefault();
+
+        if (locale === $shared.find('[data-bricks-active-locale]').first().val()) {
+            return;
+        }
+
+        $button.request($shared.attr('data-switch-handler'), {
+            data: { _bricks_locale: locale },
+        });
+    });
+
+    //
     // Read-only code editors: bricks of types the user may not edit get readOnly fields, but Winter's Monaco code
     // editor ignores its data-read-only option (it stays editable; the server still rejects the change on save).
     //

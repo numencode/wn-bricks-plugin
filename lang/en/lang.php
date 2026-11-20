@@ -28,6 +28,13 @@ return [
         'notice' => 'There are no :locale bricks yet, so the website shows the :default bricks on this page.',
         'copy'   => 'Copy the :default bricks',
     ],
+    'shared'      => [
+        'language'       => 'Language',
+        'translating'    => 'Translating into :locale. The bricks are arranged in :default; here you translate their texts. Empty fields show the :default text on the website.',
+        'default_value'  => ':locale: :value',
+        'nothing'        => 'Nothing to translate in this brick.',
+        'unknown_locale' => 'This language is not enabled.',
+    ],
     'unknown'     => [
         'name'        => 'Unknown brick (:code)',
         'description' => 'The type of this brick no longer exists.',
