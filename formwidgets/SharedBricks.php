@@ -338,16 +338,39 @@ class SharedBricks extends Repeater
         )));
 
         $translations = [];
+        $unknown = $this->unknownCodes();
 
         foreach ($this->translations as $locale => $map) {
             if ($this->isTranslating() && $locale === $this->activeLocale) {
-                $map = SharedTranslations::extract($items, $this->translatable);
+                // Bricks of missing types show nothing to edit: their stored translations stay
+                $map = SharedTranslations::extract($items, $this->translatable) + array_intersect_key(
+                    $map,
+                    array_flip(array_column(array_filter($structure, fn ($brick) => in_array($brick['_group'] ?? '', $unknown, true)), FieldBuilder::ID_FIELD)),
+                );
             }
 
-            $translations[$locale] = SharedTranslations::clean($map, $structure, $this->translatable);
+            $translations[$locale] = SharedTranslations::clean($map, $structure, $this->translatable, $unknown);
         }
 
         return [$structure, $translations];
+    }
+
+    /**
+     * The groups of brick types that no longer exist (UnknownBricks: their form has the notice field).
+     *
+     * @return array<int, string>
+     */
+    protected function unknownCodes(): array
+    {
+        $codes = [];
+
+        foreach ((array) $this->getConfig('groups', []) as $code => $group) {
+            if (isset($group['fields'][UnknownBricks::NOTICE_FIELD])) {
+                $codes[] = (string) $code;
+            }
+        }
+
+        return $codes;
     }
 
     /**

@@ -103,9 +103,11 @@ class SharedTranslations
      * @param mixed $map id => [field => value] (stored data: anything)
      * @param array<int|string, mixed> $structure
      * @param array<string, array<int, string>> $translatable code => field names
+     * @param array<int, string> $keep Codes whose translations are kept as they are (types that no longer exist: their
+     *        fields are unknown, and they come back when the type does)
      * @return array<string, array<string, mixed>>
      */
-    public static function clean(mixed $map, array $structure, array $translatable): array
+    public static function clean(mixed $map, array $structure, array $translatable, array $keep = []): array
     {
         $map = is_array($map) ? $map : [];
         $cleaned = [];
@@ -116,8 +118,12 @@ class SharedTranslations
             }
 
             $values = is_array($map[$id] ?? null) ? $map[$id] : [];
+            $code = (string) ($brick['_group'] ?? '');
+            $fields = in_array($code, $keep, true)
+                ? array_diff(array_map('strval', array_keys($values)), BrickType::RESERVED_FIELDS)
+                : $translatable[$code] ?? [];
 
-            foreach ($translatable[(string) ($brick['_group'] ?? '')] ?? [] as $field) {
+            foreach ($fields as $field) {
                 if (array_key_exists($field, $values) && !static::isEmpty($values[$field])) {
                     $cleaned[$id][$field] = $values[$field];
                 }

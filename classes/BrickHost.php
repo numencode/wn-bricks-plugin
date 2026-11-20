@@ -193,6 +193,18 @@ abstract class BrickHost
             $saved[0][$field] = $this->current($field);
             $stored[0][$field] = $this->stored($field);
 
+            // A shared structure: every language's version is the structure with that language's translations
+            if ($this->hasTranslations($field)) {
+                $key = FieldBuilder::translationsKey($field);
+
+                foreach ($this->otherLocales() as $index => $locale) {
+                    $saved[$index + 1][$field] = SharedTranslations::merge($saved[0][$field], $this->translated($key, $locale));
+                    $stored[$index + 1][$field] = SharedTranslations::merge($stored[0][$field], $this->storedTranslated($key, $locale));
+                }
+
+                continue;
+            }
+
             if (!$this->isTranslatable($field)) {
                 continue;
             }

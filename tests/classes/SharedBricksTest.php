@@ -54,9 +54,12 @@ class SharedBricksTest extends BricksTestCase
     {
         $field = new FormField('viewBag[bricks]', 'Bricks');
         $field->value = $page->viewBag['bricks'] ?? null;
+        $offered = BrickRegistry::instance()->filter(['text', 'quote', 'spacer'], [], $this->theme);
+        // A brick type that no longer exists, as PagesIntegration adds it for stored bricks
         $config = FieldBuilder::field(
             ['type' => 'bricks', 'translation' => 'fields'],
-            BrickRegistry::instance()->filter(['text', 'quote', 'spacer'], [], $this->theme),
+            $offered,
+            $offered + ['gone' => \NumenCode\Bricks\Classes\UnknownBricks::type('gone', ['title'])],
         );
 
         // The repeater asks its parent form for the controller (AJAX handler)
@@ -164,5 +167,31 @@ class SharedBricksTest extends BricksTestCase
 
         $this->assertSame('Words', $saved[0]['quote']);
         $this->assertFalse($this->widget($page)->isTranslating());
+    }
+
+    public function testTranslationsOfBricksOfMissingTypesStayWhileTranslating(): void
+    {
+        $structure = [
+            ['_group' => 'gone', '_id' => 'g1', 'title' => 'Old'],
+            ['_group' => 'quote', '_id' => 'q1', 'quote' => 'Words', 'author' => 'Ann'],
+        ];
+
+        $this->postForm([
+            'viewBag'                     => ['bricks' => [
+                ['_group' => 'gone', '_id' => 'g1', 'title' => 'Old'],
+                ['_group' => 'quote', '_id' => 'q1', 'quote' => 'Besede'],
+            ]],
+            self::ALIAS . '_locale'       => 'sl',
+            self::ALIAS . '_structure'    => json_encode($structure),
+            self::ALIAS . '_translations' => ['sl' => '{"g1":{"title":"Star naslov"}}'],
+        ]);
+        $page = $this->page();
+
+        $this->widget($page)->getSaveValue(post('viewBag.bricks'));
+
+        $this->assertSame(
+            ['g1' => ['title' => 'Star naslov'], 'q1' => ['quote' => 'Besede']],
+            $page->getTranslateAttributes('sl')['viewBag']['bricks_translations'],
+        );
     }
 }
