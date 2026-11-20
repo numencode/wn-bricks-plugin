@@ -196,7 +196,14 @@ class BrickRenderer
         }
 
         $vars = array_diff_key($brick, array_flip(BrickType::RESERVED_FIELDS));
-        $vars['brick'] = ['code' => $code, 'index' => $index, 'field' => $field, 'anchor' => $anchor, 'class' => $class];
+        $vars['brick'] = [
+            'code'   => $code,
+            'index'  => $index,
+            'field'  => $field,
+            'id'     => (string) ($brick[FieldBuilder::ID_FIELD] ?? ''),
+            'anchor' => $anchor,
+            'class'  => $class,
+        ];
 
         // Check the theme partial first: renderPartial() keeps the merged variables when it returns false for a
         // missing partial, so the next brick (and the page) would see this brick's values

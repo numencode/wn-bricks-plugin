@@ -89,6 +89,9 @@ class BrickDuplicator
                 }
             }
 
+            // The copy is a new brick: it gets its own id on save
+            unset($copy[FieldBuilder::ID_FIELD]);
+
             if ($this->maxItems && count($items) >= $this->maxItems) {
                 throw new ApplicationException(Lang::get('numencode.bricks::lang.actions.duplicate_max'));
             }

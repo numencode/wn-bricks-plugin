@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NumenCode\Bricks\Console;
 
+use NumenCode\Bricks\Classes\BrickIds;
 use NumenCode\Bricks\Classes\BrickRegistry;
 use NumenCode\Bricks\Classes\BrickType;
 use NumenCode\Bricks\Classes\PageConverter;
@@ -82,7 +83,8 @@ class ConvertPages extends BricksCommand
                 }
 
                 if (!$dryRun) {
-                    $file->setBricks($field, $bricks);
+                    // The file is written directly (not saved by a model), so the ids are assigned here
+                    $file->setBricks($field, BrickIds::bricks($bricks));
                     $file->save();
                 }
 

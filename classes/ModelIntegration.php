@@ -109,6 +109,7 @@ class ModelIntegration
         // Before Winter.Translate's model.saveInternal listener (priority 0), which stores the translations
         $host->model->bindEvent('model.saveInternal', function () use ($host, $theme) {
             EmptyOptions::clean($host);
+            BrickIds::assign($host);
             PermissionGuard::check($host, BackendAuth::getUser(), $theme);
         }, PermissionGuard::PRIORITY);
     }

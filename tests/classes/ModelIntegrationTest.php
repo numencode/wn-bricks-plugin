@@ -154,8 +154,8 @@ class ModelIntegrationTest extends BricksTestCase
         $record->save();
 
         $record = Record::find($record->id);
-        $this->assertSame([['content' => '<p>A</p>', '_class' => 'wide', '_group' => 'text']], $record->bricks);
-        $this->assertSame([['content' => '<p>B</p>', '_group' => 'text']], $record->getAttributeTranslated('bricks', 'sl'));
+        $this->assertSame([['content' => '<p>A</p>', '_class' => 'wide', '_group' => 'text']], $this->withoutIds($record->bricks));
+        $this->assertSame([['content' => '<p>B</p>', '_group' => 'text']], $this->withoutIds($record->getAttributeTranslated('bricks', 'sl')));
     }
 
     public function testPermissionsAreCheckedInEveryLanguage(): void

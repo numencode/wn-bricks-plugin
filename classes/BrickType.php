@@ -24,7 +24,7 @@ final class BrickType
      * "_anchor" and "_class" are every brick's anchor and CSS class (brick.anchor, brick.class), "brick" is a template
      * variable.
      */
-    public const RESERVED_FIELDS = ['_group', '_hidden', '_anchor', '_class', 'brick'];
+    public const RESERVED_FIELDS = ['_group', '_hidden', '_anchor', '_class', '_id', 'brick'];
 
     public const DEFAULT_ICON = 'icon-cube';
 

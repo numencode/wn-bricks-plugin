@@ -56,7 +56,7 @@ class PageCommandsTest extends CommandTestCase
         $this->assertSame([
             ['text' => 'About us', 'level' => 'h2', '_group' => 'heading'],
             ['content' => '<p>We make "things" – ž.</p>', '_group' => 'text'],
-        ], $about->bricks('bricks'));
+        ], $this->withoutIds($about->bricks('bricks')));
         $this->assertSame('<h2>About us</h2><p>We make "things" – ž.</p>', $about->markup(), 'the old content is kept');
         $this->assertSame(['title' => 'About', 'url' => '/about', 'layout' => 'bricks'], array_diff_key($about->viewBag(), ['bricks' => 1]));
 

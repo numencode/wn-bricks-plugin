@@ -110,7 +110,8 @@ li.field-repeater-item.bricks-item--hidden > .bricks-item-actions [data-bricks-a
     font-size: 11px;
     line-height: 16px;
 }
-.bricks-hidden-flag {
+.bricks-hidden-flag,
+.bricks-id {
     display: none;
 }
 

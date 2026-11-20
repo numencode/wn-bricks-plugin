@@ -66,6 +66,22 @@ abstract class BricksTestCase extends PluginTestCase
         $manager->registerComponent(\NumenCode\Bricks\Tests\Fixtures\Components\Greeting::class, 'greeting');
     }
 
+    /**
+     * Asserts that every brick has a valid id (BrickIds) and returns the bricks without it.
+     *
+     * @param array<int|string, mixed> $bricks
+     * @return array<int|string, mixed>
+     */
+    protected function withoutIds(array $bricks): array
+    {
+        foreach ($bricks as $index => $brick) {
+            $this->assertTrue(\NumenCode\Bricks\Classes\BrickIds::isValid($brick['_id'] ?? null), "brick {$index} has an id");
+            unset($bricks[$index]['_id']);
+        }
+
+        return $bricks;
+    }
+
     protected function fixturePath(string $path = ''): string
     {
         return plugins_path('numencode/bricks/tests/fixtures' . ($path === '' ? '' : '/' . $path));

@@ -23,7 +23,8 @@ The first release.
   can declare their brick's icon (`componentDetails()['icon']`) and where their content is edited
   (`bricksEditUrl()`).
 - **Rendering:** the Twig functions `renderBricks()` and `renderBrick()`, the filter `bricksVideoUrl`, and the `brick`
-  variable (code, index, field, anchor, class) in the markup.
+  variable (code, index, field, id, anchor, class) in the markup.
+- **Brick ids:** every brick gets a stable id (`_id`) when it's saved; duplicated and pasted bricks get a new one.
 - **Translations** with Winter.Translate: one list of bricks per language, "copy from" another language (with machine
   translation of the fields marked `translatable: true`), and a hint above an empty list in another language, which
   shows the default language's bricks on the website, with a button to copy them.

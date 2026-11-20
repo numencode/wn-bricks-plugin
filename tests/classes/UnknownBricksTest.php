@@ -74,7 +74,7 @@ class UnknownBricksTest extends BricksTestCase
 
         $this->assertSame(trans('numencode.bricks::lang.unknown.name', ['code' => 'gone']), $group['name']);
         $this->assertSame(UnknownBricks::ICON, $group['icon']);
-        $this->assertSame([UnknownBricks::NOTICE_FIELD, 'title', 'images', '_advanced', FieldBuilder::ANCHOR_FIELD, FieldBuilder::CLASS_FIELD, FieldBuilder::HIDDEN_FIELD], array_keys($group['fields']));
+        $this->assertSame([UnknownBricks::NOTICE_FIELD, 'title', 'images', '_advanced', FieldBuilder::ANCHOR_FIELD, FieldBuilder::CLASS_FIELD, FieldBuilder::HIDDEN_FIELD, FieldBuilder::ID_FIELD], array_keys($group['fields']));
         $this->assertSame('partial', $group['fields']['images']['type']);
         $this->assertContains('gone', explode(',', $field['containerAttributes']['data-bricks-hidden']));
         $this->assertFalse(BrickRegistry::instance()->has('gone'), 'not a registered type, so never rendered');

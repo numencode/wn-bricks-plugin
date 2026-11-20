@@ -35,6 +35,11 @@ class FieldBuilder
     public const CLASS_FIELD = '_class';
 
     /**
+     * Every brick's stable id (BrickIds), posted back by a hidden input.
+     */
+    public const ID_FIELD = '_id';
+
+    /**
      * The section of a theme's own brick types: BrickType::$plugin = THEME_SECTION . <theme directory>. Its heading is
      * the theme's name, and it comes first in the "Add brick" list (the types made for the website).
      */
@@ -42,7 +47,7 @@ class FieldBuilder
 
     /**
      * Repeater groups: code => [name, description, icon, fields]. Names and descriptions stay lang keys; the
-     * repeater translates them. Every group also gets the advanced fields (anchor, CSS class) and the HIDDEN_FIELD.
+     * repeater translates them. Every group also gets the advanced fields (anchor, CSS class), the HIDDEN_FIELD and the ID_FIELD.
      *
      * @param array<string, BrickType> $types
      * @param array<int, string> $readOnly Codes of the types whose fields are read-only
@@ -64,6 +69,11 @@ class FieldBuilder
                 'type'     => 'partial',
                 'path'     => '$/numencode/bricks/classes/fieldbuilder/_hidden.php',
                 'cssClass' => 'bricks-hidden-flag',
+            ];
+            $fields[self::ID_FIELD] = [
+                'type'     => 'partial',
+                'path'     => '$/numencode/bricks/classes/fieldbuilder/_id.php',
+                'cssClass' => 'bricks-id',
             ];
 
             $groups[$code] = [

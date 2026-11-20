@@ -180,7 +180,7 @@ fields:                             # standard backend form fields
 | `permissions` | A permission code or a list; only backend users with one of them may add or change these bricks. |
 | `editUrl` | A backend URL where the brick's content is edited, with `{field}` placeholders, e.g. `acme/shop/products/update/{product}`. |
 
-The field names `_group`, `_hidden`, `_anchor`, `_class` and `brick` are reserved.
+The field names `_group`, `_hidden`, `_anchor`, `_class`, `_id` and `brick` are reserved.
 
 **Markup variables:** every field by its name, the page's variables, and `brick`:
 
@@ -189,6 +189,7 @@ The field names `_group`, `_hidden`, `_anchor`, `_class` and `brick` are reserve
 | `brick.code` | The brick type. |
 | `brick.index` | The brick's position in its field (from 0). |
 | `brick.field` | The bricks field's name (e.g. `bricks`). |
+| `brick.id` | The brick's stable id (a short random string that stays the same when the brick is moved or edited). |
 | `brick.anchor` | The anchor, as a slug ("Our team" → `our-team`), or empty. |
 | `brick.class` | The CSS classes (letters, digits, `-` and `_`), or empty. |
 
@@ -417,7 +418,8 @@ languages. A component brick's own content (e.g. a widget group) is translated w
 ## Data format
 
 Bricks are stored in the page's `viewBag` (the page file in `content/static-pages`, the other languages in
-`content/static-pages-<locale>`), one entry per brick, with the type in `_group`:
+`content/static-pages-<locale>`), one entry per brick, with the type in `_group` and a stable id in `_id` (assigned when the page is
+saved; a duplicated or pasted brick gets a new one):
 
 ```ini
 [viewBag]
@@ -427,12 +429,15 @@ layout = "bricks"
 bricks[0][text] = "Our story"
 bricks[0][level] = "h2"
 bricks[0][_group] = "heading"
+bricks[0][_id] = "k3v9q0x2ma"
 bricks[1][content] = "<p>It began in a small workshop…</p>"
 bricks[1][_anchor] = "story"
 bricks[1][_group] = "text"
+bricks[1][_id] = "p8d1w5rj4c"
 bricks[2][size] = "large"
 bricks[2][_hidden] = 1
 bricks[2][_group] = "spacer"
+bricks[2][_id] = "z0t7h2nb6e"
 ```
 
 The pages stay theme files: deploy them as before. Bricks need no cache of their own: Winter caches the parsed YAML
