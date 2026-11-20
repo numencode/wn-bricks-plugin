@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-21
+
 The first release.
 
 ### Added
@@ -73,4 +75,5 @@ The first release.
   `renderBricks(post, 'bricks')` renders a model's bricks in the visitor's language (`renderBricks(list, 'name')`
   a plain list); their component bricks are created while rendering.
 
-[Unreleased]: https://github.com/numencode/wn-bricks-plugin/commits/main
+[Unreleased]: https://github.com/numencode/wn-bricks-plugin/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/numencode/wn-bricks-plugin/releases/tag/v1.0.0

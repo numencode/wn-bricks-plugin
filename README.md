@@ -96,7 +96,7 @@ Pages that still have rich-editor content can fall back to it while they have no
 | `prompt` | The text of the "Add brick" button. |
 | `allow` | Only these brick types are offered, in this order (comma separated codes). |
 | `ignore` | These brick types are not offered. |
-| `translation` | With Winter.Translate: `lists` (default) – one list of bricks per language; `fields` – one shared structure, see [Translations](#translations). |
+| `translation` | With Winter.Translate: `lists` (default) – every language has its own list of bricks; `fields` – one list shared by all languages, which only translate its texts. See [Choosing a translation mode](#choosing-a-translation-mode). |
 
 Bricks of types a field doesn't offer (because of `allow`/`ignore` or permissions) keep their content: they can't be
 added, but existing ones are shown and saved unchanged.
@@ -441,8 +441,39 @@ static pages.
 
 ## Translations
 
-With Winter.Translate, each language has **its own list of bricks** (the field becomes Translate's multilingual
-repeater):
+With Winter.Translate, a bricks field is translated in one of two ways. You choose the mode per bricks field with the
+`translation` option: on the layout tag for static pages, or in `fields.yaml` for models. A page gets the mode of its
+layout's field, so a theme can have one layout of each kind. `renderBricks()` is the same in both modes.
+
+### Choosing a translation mode
+
+| | Per-language lists (`translation="lists"`, the default) | Shared structure (`translation="fields"`) |
+|---|---|---|
+| What is translated | Each language has **its own list of bricks**, a copy of the default language's list. | There is **one list of bricks**; the other languages translate only its texts. |
+| Structure in other languages | Free: add, remove, reorder and configure bricks per language. | Locked: the bricks, their order and their settings come from the default language. |
+| Which fields can be translated | Every field (it's a separate list). | Only the fields marked `translatable: true` in the brick type. |
+| A brick added later in the default language | Appears in the other languages only after copying it there (or copying the whole list again). | Appears in every language at once, with the default text until it is translated. |
+| An untranslated language | Shows the default language's whole list while its own list is empty. | Shows the default text for each untranslated field. |
+| Machine translation (with a provider) | The `translatable: true` fields, when a list is copied from another language. | The empty `translatable: true` fields, or one brick at a time. |
+| Stored in the other languages | The whole list (`viewBag[bricks]`; on models, the translated attribute). | Only the translated values per brick (`viewBag[bricks_translations]`; on models, `<attribute>_translations`). |
+| On a model | List the attribute in `$translatable`. | Don't list the attribute in `$translatable`; Bricks stores the translations itself. Render it with `renderBricks(post, 'bricks')`. |
+
+**Use a shared structure** when the languages are versions of the same page: the same sections and images in the same
+order, with translated texts. Editors arrange the page once, and the languages can't drift apart.
+
+**Use per-language lists** when the languages need different content: a section only for one market, other images
+or links, a different order. They are also the only choice for fields whose values differ per language but aren't
+marked `translatable: true` (e.g. a different video per language).
+
+Changing the mode of an existing field (or a page's layout) doesn't convert the stored translations, but doesn't
+delete them either: both kinds are kept side by side in the other languages, and each mode uses only its own. After
+switching from lists to fields, the other languages show the default text until they are translated; after switching
+from fields to lists, they show their old lists (or the default language's list where they have none). Switching
+back brings the earlier translations back.
+
+### Per-language lists (`translation: lists`)
+
+The field becomes Translate's multilingual repeater:
 
 1. Edit the page in the default language.
 2. Switch the bricks field to another language. While its list is empty, a hint says so: the website shows the
@@ -456,7 +487,7 @@ languages. A component brick's own content (e.g. a widget group) is translated w
 
 ### Shared structure (`translation: fields`)
 
-For sites where every language has the same layout, a bricks field can have **one shared structure**:
+One list of bricks for all languages; the other languages translate its `translatable: true` fields:
 
 ```twig
 {variable type="bricks" name="bricks" tab="Content" translation="fields"}{/variable}
