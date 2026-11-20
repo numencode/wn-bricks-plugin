@@ -38,12 +38,13 @@ class EmptyOptions
     public static function clean(object $host): void
     {
         $host = BrickHost::of($host);
+        $types = $host->types();
 
         foreach ($host->fields() as $field) {
             $bricks = $host->current($field);
 
             if ($bricks) {
-                $cleaned = static::bricks($bricks);
+                $cleaned = static::bricks($bricks, $types);
 
                 if ($cleaned !== $bricks) {
                     $host->setCurrent($field, $cleaned);
@@ -56,7 +57,7 @@ class EmptyOptions
 
             foreach ($host->otherLocales() as $locale) {
                 $translated = $host->translated($field, $locale);
-                $cleaned = static::bricks($translated);
+                $cleaned = static::bricks($translated, $types);
 
                 if ($translated && $cleaned !== $translated) {
                     $host->setTranslated($field, $cleaned, $locale);
@@ -66,25 +67,22 @@ class EmptyOptions
     }
 
     /**
+     * A list of bricks without empty options, also in its nested lists (walked with $types).
+     *
      * @param array<int|string, mixed> $bricks
+     * @param array<string, BrickType> $types
      * @return array<int|string, mixed>
      */
-    public static function bricks(array $bricks): array
+    public static function bricks(array $bricks, array $types = []): array
     {
-        foreach ($bricks as $index => $brick) {
-            if (!is_array($brick)) {
-                continue;
-            }
-
+        return BrickTree::map($bricks, function (array $brick): array {
             foreach (self::KEYS as $key) {
                 if (array_key_exists($key, $brick) && (is_scalar($brick[$key]) || $brick[$key] === null) && trim((string) $brick[$key]) === '') {
                     unset($brick[$key]);
                 }
             }
 
-            $bricks[$index] = $brick;
-        }
-
-        return $bricks;
+            return $brick;
+        }, $types);
     }
 }

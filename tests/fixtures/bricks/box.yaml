@@ -1,0 +1,10 @@
+name: Box
+description: A container holding other bricks (tests)
+fields:
+    title:
+        label: Title
+        type: text
+        translatable: true
+    inner:
+        label: Inner
+        type: bricks

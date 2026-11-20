@@ -51,7 +51,7 @@ class UnknownBricks
     }
 
     /**
-     * The value keys of a field's stored bricks per type code, from every locale.
+     * The value keys of a field's stored bricks per type code (nested bricks included), from every locale.
      *
      * @param Page|BrickHost $host
      * @return array<string, array<int, string>>
@@ -69,9 +69,12 @@ class UnknownBricks
         $host = BrickHost::of($host->model, [$key]);
         [$saved, $stored] = $host->versions();
 
+        $types = $host->types();
+
+        // Nested bricks too: every nested list's repeater gets the same groups
         foreach (array_merge($saved, $stored) as $lists) {
-            foreach ($lists[$key] ?? [] as $brick) {
-                if (!is_array($brick) || !is_string($code = $brick['_group'] ?? null) || $code === '') {
+            foreach (BrickTree::flatten((array) ($lists[$key] ?? []), $types) as $brick) {
+                if (!is_string($code = $brick['_group'] ?? null) || $code === '') {
                     continue;
                 }
 

@@ -29,6 +29,11 @@ class PermissionGuard
      */
     public const PRIORITY = 100;
 
+    /**
+     * Showing or hiding a brick, its anchor, CSS class and id aren't changes of its content (like moving it).
+     */
+    public const OPTION_KEYS = [FieldBuilder::HIDDEN_FIELD, FieldBuilder::ANCHOR_FIELD, FieldBuilder::CLASS_FIELD, FieldBuilder::ID_FIELD];
+
     public static function register(): void
     {
         Page::extend(function (Page $page) {
@@ -48,10 +53,8 @@ class PermissionGuard
             return;
         }
 
-        $denied = array_filter(
-            BrickRegistry::instance()->all($theme ?? Theme::getEditTheme()),
-            fn (BrickType $type) => !$type->isAllowedFor($user),
-        );
+        $types = BrickRegistry::instance()->all($theme ?? Theme::getEditTheme());
+        $denied = array_filter($types, fn (BrickType $type) => !$type->isAllowedFor($user));
 
         $host = BrickHost::of($host);
 
@@ -63,13 +66,13 @@ class PermissionGuard
         $allowed = [];
 
         foreach ($stored as $lists) {
-            foreach (static::bricksOf($lists, $denied) as $brick) {
+            foreach (static::bricksOf($lists, $denied, $types) as $brick) {
                 $allowed[static::fingerprint($brick)] = true;
             }
         }
 
         foreach ($saved as $lists) {
-            foreach (static::bricksOf($lists, $denied) as $field => $brick) {
+            foreach (static::bricksOf($lists, $denied, $types) as $field => $brick) {
                 if (!isset($allowed[static::fingerprint($brick)])) {
                     throw new ValidationException([$host->formName((string) $field) => Lang::get(
                         'numencode.bricks::lang.permissions.denied',
@@ -81,17 +84,19 @@ class PermissionGuard
     }
 
     /**
-     * The bricks of the denied types in lists of bricks (field => bricks), as [field, brick] pairs.
+     * The bricks of the denied types in lists of bricks (field => bricks), nested bricks included (a brick moved into
+     * or out of a container keeps its content), as [field, brick] pairs.
      *
      * @param array<string, array<int|string, mixed>> $lists
      * @param array<string, BrickType> $denied
+     * @param array<string, BrickType> $types All types (to find the nested lists)
      * @return \Generator<string, array<string, mixed>>
      */
-    protected static function bricksOf(array $lists, array $denied): \Generator
+    protected static function bricksOf(array $lists, array $denied, array $types = []): \Generator
     {
         foreach ($lists as $field => $bricks) {
-            foreach ($bricks as $brick) {
-                if (is_array($brick) && isset($denied[$brick['_group'] ?? ''])) {
+            foreach (BrickTree::flatten((array) $bricks, $types) as $brick) {
+                if (isset($denied[$brick['_group'] ?? ''])) {
                     yield $field => $brick;
                 }
             }
@@ -100,19 +105,12 @@ class PermissionGuard
 
     /**
      * A brick's content, independent of how it was stored or sent: line endings, surrounding whitespace, empty
-     * values and the order of keys don't count (the order of list items does).
+     * values and the order of keys don't count (the order of list items does). Neither do the options (OPTION_KEYS)
+     * of the brick and of the bricks inside it.
      */
     public static function fingerprint(array $brick): string
     {
-        // Showing or hiding a brick, its anchor, CSS class and id aren't changes of its content (like moving it)
-        unset(
-            $brick[FieldBuilder::HIDDEN_FIELD],
-            $brick[FieldBuilder::ANCHOR_FIELD],
-            $brick[FieldBuilder::CLASS_FIELD],
-            $brick[FieldBuilder::ID_FIELD],
-        );
-
-        return json_encode(static::normalize($brick), JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+        return json_encode(static::normalize(array_diff_key($brick, array_flip(self::OPTION_KEYS))), JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
     }
 
     protected static function normalize(mixed $value): mixed
@@ -122,6 +120,11 @@ class PermissionGuard
         }
 
         $result = [];
+
+        // A brick (also a nested one): its options aren't content
+        if (isset($value['_group'])) {
+            $value = array_diff_key($value, array_flip(self::OPTION_KEYS));
+        }
 
         foreach ($value as $key => $item) {
             $item = static::normalize($item);

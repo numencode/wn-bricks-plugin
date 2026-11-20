@@ -52,6 +52,28 @@ class BrickDuplicator
     }
 
     /**
+     * A brick without its id and the ids of the bricks inside it (any nested value with a "_group").
+     *
+     * @param array<string, mixed> $brick
+     * @return array<string, mixed>
+     */
+    public static function withoutIds(array $brick): array
+    {
+        unset($brick[FieldBuilder::ID_FIELD]);
+
+        foreach ($brick as $key => $value) {
+            if (is_array($value)) {
+                $brick[$key] = array_map(
+                    fn ($item) => is_array($item) && isset($item['_group']) ? static::withoutIds($item) : $item,
+                    $value,
+                );
+            }
+        }
+
+        return $brick;
+    }
+
+    /**
      * @return array<string, string> The new item's markup ("item") and its index ("index")
      * @throws ApplicationException
      */
@@ -89,8 +111,8 @@ class BrickDuplicator
                 }
             }
 
-            // The copy is a new brick: it gets its own id on save
-            unset($copy[FieldBuilder::ID_FIELD]);
+            // The copy is a new brick: it gets its own id on save, and so do the bricks inside it
+            $copy = BrickDuplicator::withoutIds($copy);
 
             if ($this->maxItems && count($items) >= $this->maxItems) {
                 throw new ApplicationException(Lang::get('numencode.bricks::lang.actions.duplicate_max'));
