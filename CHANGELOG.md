@@ -18,12 +18,16 @@ The first release.
   Themes override any type's markup with `partials/bricks/<code>.htm`.
 - **Base set:** heading, text, image, gallery, columns, button, quote, video (YouTube, Vimeo), divider, spacer and HTML,
   with plain BEM-style markup and English and Slovenian labels.
+- **Bricks inside bricks:** a `type: bricks` field in a brick type (with `allow` / `ignore`) holds a list of bricks
+  inside the brick; Columns holds one per column. The markup gets the rendered bricks (`{{ column_1|raw }}`) and
+  `brick.lists.<field>` (html, code, id, index, values); component bricks, hidden bricks, preview, duplicate, copy and
+  paste, permissions and the shared structure's translations work at every level. Config `max_depth` (default 2).
 - **Component bricks:** a component's properties become the brick's fields, and the component runs on the page
   (`onRun()`, AJAX handlers). Winter.Pages snippet components are bricks automatically (config `snippets`); components
   can declare their brick's icon (`componentDetails()['icon']`) and where their content is edited
   (`bricksEditUrl()`).
 - **Rendering:** the Twig functions `renderBricks()` and `renderBrick()`, the filter `bricksVideoUrl`, and the `brick`
-  variable (code, index, field, id, anchor, class) in the markup.
+  variable (code, index, field, id, anchor, class, lists) in the markup.
 - **Brick ids:** every brick gets a stable id (`_id`) when it's saved; duplicated and pasted bricks get a new one.
 - **Translations** with Winter.Translate: one list of bricks per language, "copy from" another language (with machine
   translation of the fields marked `translatable: true`), and a hint above an empty list in another language, which
@@ -51,11 +55,12 @@ The first release.
 - **Bricks of unknown types** (e.g. a removed theme definition) keep their content when the page is saved; they are
   shown as "Unknown brick" and not rendered.
 - **Console commands:**
-  - `create:brick` scaffolds a brick type in a theme or a plugin, or copies an existing type (`--override`) or only its
-    markup (`--markup`) into the theme
+  - `create:brick` scaffolds a brick type in a theme or a plugin (`--container`: one holding other bricks), or copies an
+    existing type (`--override`) or only its markup (`--markup`) into the theme
   - `bricks:list` lists the brick types, where each comes from and what it overrides
   - `bricks:validate` checks every definition and markup file (field types, Twig, components, lang keys,
-    permissions, unused partials, the layouts' `translation` options) and exits with 1 on errors, for CI
+    permissions, unused partials, the layouts' `translation` options, nested bricks fields) and exits with 1 on errors,
+    for CI
     (`--theme-only`, `--strict`)
   - `bricks:convert-pages` turns the content of static pages into bricks in every language: snippets into component
     bricks, headings, images and dividers into their bricks, the rest into text bricks; the old content is kept

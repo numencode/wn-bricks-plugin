@@ -64,6 +64,11 @@ class BrickValidatorTest extends BricksTestCase
             'error missing missing.yaml: the component class Acme\Nope\Components\Nope doesn\'t exist',
             // Partials without a type ("_helper" is a helper partial)
             'warning orphan orphan.htm: the partial is not used: there is no brick type with this code',
+            // Bricks inside bricks: allow/ignore codes, the translation option, a bricks field inside another field
+            'warning stack stack.yaml: the bricks field "items" has a "translation" option, which is ignored: nested bricks are translated with their brick',
+            'warning stack stack.yaml: "allow" of the bricks field "items" names the brick type "nope", which doesn\'t exist',
+            'warning stack stack.yaml: "ignore" of the bricks field "items" names the brick type "gone", which doesn\'t exist',
+            'error stack stack.yaml: the bricks field "slides.content" is inside another field; bricks fields must be fields of the brick itself',
             // Layouts: the bricks fields' translation option
             'error wrong translated.htm: the bricks field: Unknown bricks "translation" option "per-field" (use "lists" or "fields").',
         ];

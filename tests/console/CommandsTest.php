@@ -73,7 +73,7 @@ class CommandsTest extends CommandTestCase
         [$code, $output] = $this->command('bricks:validate');
         $this->assertSame(1, $code);
         $this->assertStringContainsString('unknown type "txt"', $output);
-        $this->assertStringContainsString('6 error(s), 8 warning(s)', $output);
+        $this->assertStringContainsString('7 error(s), 11 warning(s)', $output);
 
         [$code, $output] = $this->command('bricks:validate', ['--theme' => 'nope']);
         $this->assertSame(1, $code);
@@ -259,6 +259,22 @@ class CommandsTest extends CommandTestCase
         [$code, $output] = $this->command('create:brick', ['code' => 'promo', '--plugin' => 'NumenCode.Bricks', '--override' => true]);
         $this->assertSame(1, $code);
         $this->assertStringContainsString('leave out --plugin', $output);
+    }
+
+    public function testCreateAContainer(): void
+    {
+        $theme = $this->useScratchTheme();
+
+        [$code, $output] = $this->command('create:brick', ['code' => 'panel', '--container' => true]);
+        $this->assertSame(0, $code, $output);
+
+        $type = BrickRegistry::instance()->get('panel', $theme);
+        $this->assertTrue($type->isContainer());
+        $this->assertSame(['items'], array_keys($type->bricksFields()));
+        $this->assertStringContainsString('{{ items|raw }}', (string) file_get_contents($theme->getPath() . '/partials/bricks/panel.htm'));
+
+        [$code, $output] = $this->command('bricks:validate', ['--strict' => true]);
+        $this->assertSame(0, $code, $output);
     }
 
     public function testTheScaffoldIsAValidDefinition(): void

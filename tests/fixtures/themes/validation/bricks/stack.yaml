@@ -1,0 +1,14 @@
+name: Stack
+fields:
+    items:
+        label: Items
+        type: bricks
+        allow: [text, nope]
+        ignore: gone
+        translation: fields
+    slides:
+        type: repeater
+        form:
+            fields:
+                content:
+                    type: bricks

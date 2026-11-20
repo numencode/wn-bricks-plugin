@@ -17,6 +17,8 @@ plugins or themes, and themes can override every brick's markup.
   with plain, semantic markup.
 - **Your own brick types** – a YAML file with standard backend form fields plus a Twig file, in a plugin or a theme.
 - **Theme overrides** – a theme can replace the markup (`partials/bricks/<code>.htm`) or the fields of any brick type.
+- **Bricks inside bricks** – a brick type can hold other bricks (Columns holds a list of bricks per column), with the
+  same editor, permissions and translations at every level.
 - **Bricks on any model** – a `type: bricks` form field stores bricks in a model's attribute, e.g. on blog posts.
 - **Component bricks** – CMS components become bricks, with fields generated from their properties. Every Winter.Pages
   snippet component (e.g. [NumenCode.Widgets](https://github.com/numencode/wn-widgets-plugin)) is a brick
@@ -194,8 +196,47 @@ The field names `_group`, `_hidden`, `_anchor`, `_class`, `_id` and `brick` are 
 | `brick.id` | The brick's stable id (a short random string that stays the same when the brick is moved or edited). |
 | `brick.anchor` | The anchor, as a slug ("Our team" → `our-team`), or empty. |
 | `brick.class` | The CSS classes (letters, digits, `-` and `_`), or empty. |
+| `brick.lists` | A container's bricks per bricks field (see [Bricks inside bricks](#bricks-inside-bricks)). |
 
 All CMS filters and functions work (`|media`, `|resize`, `|page`, `|_`, …).
+
+### Bricks inside bricks
+
+A field `type: bricks` in a brick type makes it a container: the field is a list of bricks inside the brick, with
+`allow` / `ignore` like the layout tag:
+
+```yaml
+# tabs.yaml
+name: Tabs
+fields:
+    title:
+        label: Title
+        type: text
+        translatable: true
+    items:
+        label: Tabs
+        type: bricks
+        allow: [text, image, gallery]
+```
+
+- In the markup the field is the **rendered bricks** (`{{ items|raw }}`), and `brick.lists.items` lists them for markup
+  that places them itself: each with `html`, `code`, `id`, `index` and `values` (the brick's fields).
+
+  ```twig
+  {% for child in brick.lists.items %}
+      <section class="tab" id="tab-{{ child.id }}">{{ child.html }}</section>
+  {% endfor %}
+  ```
+
+- Hidden bricks inside are skipped; nothing inside a hidden brick is rendered. Component bricks inside work, also their
+  AJAX handlers on static pages (alias e.g. `brick_bricks_2_column_1_0`).
+- In the editor every list has its own "Add brick" list, duplicate, copy and paste (a brick with its bricks inside),
+  hide and the preview button.
+- **Depth:** by default 2 levels – a page's bricks and the bricks inside them, but no container inside a container.
+  Change it with `max_depth` in `config/numencode/bricks/config.php` (1: no nesting). Bricks stored deeper than allowed
+  keep their content, but it can't be edited.
+- Only a brick type's own fields can be `type: bricks`, not fields inside a repeater's form (`bricks:validate` reports
+  it).
 
 ### In a plugin
 
@@ -229,13 +270,15 @@ the theme.
 ```bash
 php artisan create:brick call-to-action                       # in the active theme
 php artisan create:brick call-to-action --plugin=Acme.Shop    # in a plugin
+php artisan create:brick panel --container                    # a brick holding other bricks
 php artisan create:brick image --override                     # copy a brick type into the theme, to change it there
 php artisan create:brick image --markup                       # copy only its markup
 ```
 
 A new type gets a definition with a title and a text field and matching markup: `bricks/<code>.yaml` +
 `partials/bricks/<code>.htm` in a theme (in the "Add brick" list right away), or `bricks/<code>.yaml` + `.htm` in a
-plugin (the command prints the line for `registerBricks()`). `--override` copies the definition and markup of the brick
+plugin (the command prints the line for `registerBricks()`); `--container` gives it a bricks field instead of the
+text. `--override` copies the definition and markup of the brick
 type in use into the theme; `--markup` only the markup. A component brick from a snippet gets a definition with its
 component, to override the generated fields.
 
@@ -438,8 +481,10 @@ bricks:
 - NumenCode.Fundamentals' form language selector (on model forms) switches the field too.
 - On models, render it with `renderBricks(post, 'bricks')`: a plain list (`post.bricks`) has no translations.
 
-Only a brick's own fields are translated: fields inside a nested list (e.g. the gallery's captions) are not. Saving
-checks permissions in every language, and keeps the translations of bricks whose type no longer exists.
+Bricks inside bricks are part of the structure too: locked in other languages, their translatable fields translated
+like the others (the translate button of a container translates the bricks inside it as well). Only bricks have
+translatable fields: fields inside an ordinary repeater (e.g. the gallery's captions) are not translated. Saving checks
+permissions in every language, and keeps the translations of bricks whose type no longer exists.
 
 ## Permissions
 
@@ -472,7 +517,15 @@ bricks[2][size] = "large"
 bricks[2][_hidden] = 1
 bricks[2][_group] = "spacer"
 bricks[2][_id] = "z0t7h2nb6e"
+bricks[3][columns] = "2"
+bricks[3][column_1][0][content] = "<p>Left</p>"
+bricks[3][column_1][0][_group] = "text"
+bricks[3][column_1][0][_id] = "m5c2v8xq1w"
+bricks[3][_group] = "columns"
+bricks[3][_id] = "a4n6r1ys9d"
 ```
+
+Bricks inside bricks are stored inside their brick (`column_1` above); ids are unique in the whole field.
 
 A shared structure (`translation: fields`) stores only the translated values in the other languages, per brick id
 (`<name>_translations`; on a model, a translated attribute without a column):
@@ -486,12 +539,6 @@ bricks_translations[p8d1w5rj4c][content] = "<p>Začelo se je v majhni delavnici 
 The pages stay theme files: deploy them as before. Bricks need no cache of their own: Winter caches the parsed YAML
 definitions by their modification time.
 
-## Roadmap
-
-Planned before the first release (1.0.0):
-
-- **Bricks inside bricks:** a bricks field inside a brick type. The Columns brick will hold a list of bricks per
-  column.
 
 ## Changelog
 

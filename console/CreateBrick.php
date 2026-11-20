@@ -27,6 +27,7 @@ class CreateBrick extends BricksCommand
         {--markup : Copy only the markup of an existing brick type into the theme (partials/bricks/<code>.htm)}
         {--name= : The name in the editor (default: from the code)}
         {--icon=icon-cube : The icon class}
+        {--container : A brick holding other bricks (a "bricks" field instead of the content)}
         {--f|force : Overwrite existing files}';
 
     protected $description = 'Create a brick type (definition and markup) in the theme or a plugin, or copy an existing one into the theme.';
@@ -213,6 +214,28 @@ class CreateBrick extends BricksCommand
         $name = $this->option('name') ?: Str::ucfirst(str_replace(['-', '_'], ' ', $code));
         $icon = $this->option('icon') ?: BrickType::DEFAULT_ICON;
 
+        if ($this->option('container')) {
+            return <<<YAML
+                # Brick type "{$code}": a container – its "bricks" field holds other bricks (config max_depth: how deep).
+                # Fields are backend form fields (https://wintercms.com/docs/v1.2/docs/backend/forms).
+                name: {$this->yamlString($name)}
+                # description: Shown in the "Add brick" list
+                icon: {$this->yamlString($icon)}
+                titleFrom: title
+                fields:
+                    title:
+                        label: Title
+                        type: text
+                        translatable: true
+                    items:
+                        label: Bricks
+                        type: bricks
+                        # allow: [text, image]
+                        # ignore: [html]
+
+                YAML;
+        }
+
         return <<<YAML
             # Brick type "{$code}". Fields are backend form fields (https://wintercms.com/docs/v1.2/docs/backend/forms).
             # Mark text fields "translatable: true" so Winter.Translate machine-translates them on "copy from".
@@ -236,6 +259,22 @@ class CreateBrick extends BricksCommand
 
     protected function markupStub(string $code): string
     {
+        if ($this->option('container')) {
+            return <<<TWIG
+                {#
+                    Brick "{$code}". Variables: title, items (the rendered bricks inside; brick.lists.items lists them:
+                    html, code, id, index, values), the page's variables and brick = {code, index, field, anchor, class}.
+                #}
+                <section class="brick brick--{$code}{% if brick.class %} {{ brick.class }}{% endif %}"{% if brick.anchor %} id="{{ brick.anchor }}"{% endif %}>
+                    {% if title %}
+                        <h2 class="brick__title">{{ title }}</h2>
+                    {% endif %}
+                    <div class="brick__items">{{ items|raw }}</div>
+                </section>
+
+                TWIG;
+        }
+
         return <<<TWIG
             {#
                 Brick "{$code}". Variables: the fields (title, content), the page's variables and
