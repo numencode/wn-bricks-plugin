@@ -282,3 +282,13 @@ div.form-group.bricks-preview[data-field-name="_preview"] div[data-control="page
     height: 24px;
     padding: 0 6px;
 }
+
+/* A nested list (bricks inside a brick): only the paste buttons, smaller */
+.bricks-toggle-all--nested {
+    margin-bottom: 4px;
+}
+.bricks-toggle-all--nested > .btn.bricks-paste,
+.bricks-toggle-all--nested > .btn.bricks-paste-clear {
+    padding-top: 2px;
+    padding-bottom: 2px;
+}

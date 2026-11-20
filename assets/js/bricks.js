@@ -8,6 +8,10 @@
  *   The list is a <script data-group-palette-template>, re-rendered on AJAX updates (e.g. a locale switch).
  * - Collapsed bricks show "Type: summary": the value of the type's titleFrom field, or of its first filled field.
  * - "Expand all" / "Collapse all" buttons above the bricks.
+ *
+ * Bricks inside bricks (a type's bricks fields, e.g. the columns of Columns) are bricks fields of their own: a nested
+ * container (data-bricks-depth) inside a brick's form. Everything here works per container, so an outer container never
+ * acts on the elements of the containers inside it. Nested lists get only the paste buttons above them.
  */
 +function ($) {
     'use strict';
@@ -27,6 +31,13 @@
         var $container = $repeater.closest('.form-group');
 
         return $container.is('[data-bricks]') ? $container : $();
+    }
+
+    // The elements of a container's own bricks field, not those of the bricks fields inside its bricks
+    function own($container, selector) {
+        return $container.find(selector).filter(function () {
+            return $(this).closest('[data-bricks]')[0] === $container[0];
+        });
     }
 
     //
@@ -54,7 +65,7 @@
                 hidden = hiddenCodes($container),
                 sections = config($container).sections || [];
 
-            $container.find('script[data-group-palette-template]').each(function () {
+            own($container, 'script[data-group-palette-template]').each(function () {
                 if (this.getAttribute('data-bricks-processed') || (!hidden.length && !sections.length)) {
                     return;
                 }
@@ -221,7 +232,7 @@
             return {type: type, summary: ''};
         }
 
-        var code = $item.find('input[name$="[_group]"]').first().val();
+        var code = hiddenGroupInput($item).val();
 
         return {type: type, summary: itemSummary($item, (config($container).titleFrom || {})[code])};
     }
@@ -459,7 +470,7 @@
 
     function updateEditLink($item) {
         var $container = bricksContainer($item.closest('[data-control="fieldrepeater"]')),
-            code = $item.find('input[name$="[_group]"]').first().val(),
+            code = hiddenGroupInput($item).val(),
             edit = (config($container).edit || {})[code],
             url = edit ? editUrl(edit.url, $item) : '',
             $link = $item.children('.bricks-item-actions').children('.bricks-item-edit');
@@ -510,9 +521,12 @@
                 return;
             }
 
+            var nested = $container.is('[data-bricks-depth]');
+
             // Translatable fields have a language button in the top right corner
             var $buttons = $('<div class="bricks-toggle-all">')
-                .toggleClass('bricks-toggle-all--multilingual', $container.find('.field-multilingual').length > 0);
+                .toggleClass('bricks-toggle-all--nested', nested)
+                .toggleClass('bricks-toggle-all--multilingual', !nested && own($container, '.field-multilingual').length > 0);
 
             // Shown while a copied brick is in the clipboard (updatePasteButtons()); the X forgets it
             $('<button type="button" class="btn btn-default btn-xs bricks-paste wn-icon-clipboard" data-bricks-paste>')
@@ -526,7 +540,8 @@
                 .hide()
                 .appendTo($buttons);
 
-            $.each({expand: settings.expandAll, collapse: settings.collapseAll}, function (action, label) {
+            // A nested list: only the paste buttons
+            $.each(nested ? {} : {expand: settings.expandAll, collapse: settings.collapseAll}, function (action, label) {
                 $('<button type="button" class="btn btn-default btn-xs">')
                     .addClass(action === 'expand' ? 'wn-icon-angle-double-down' : 'wn-icon-angle-double-up')
                     .attr('data-bricks-toggle', action)
@@ -670,7 +685,7 @@
     $(document).on('click', '[data-bricks] [data-bricks-paste]', function () {
         var $container = $(this).closest('[data-bricks]'),
             clipboard = readClipboard(),
-            template = $container.find('script[data-group-palette-template]').first().html() || '',
+            template = own($container, 'script[data-group-palette-template]').first().html() || '',
             handler = (template.match(/data-request="([^"]+)::onAddItem"/) || [])[1],
             $repeater = $container.find('[data-control="fieldrepeater"]').filter(function () {
                 return bricksContainer($(this)).is($container);
@@ -784,12 +799,29 @@
 
     var previewTarget = null;
 
-    // "<field>:<index>" of a brick, as the preview marks it (the field name without "viewBag[…]")
-    function previewKey($item) {
-        var name = String($item.closest('[data-bricks]').attr('data-field-name') || ''),
-            match = name.match(/^viewBag\[([^\]]+)\]$/);
+    // The list of a brick and its position there, as the preview marks it (BrickRenderer::path()): the field name
+    // without "viewBag[…]", for a nested brick the path of the brick around it, e.g. "bricks.2.column_1"
+    function brickPosition($item) {
+        var $container = $item.closest('[data-bricks]'),
+            name = String($container.attr('data-field-name') || ''),
+            match = name.match(/^viewBag\[([^\]]+)\]$/),
+            $parent = $container.parent().closest('.bricks-item'),
+            list = match ? match[1] : name;
 
-        return (match ? match[1] : name) + ':' + $item.parent().children('.field-repeater-item').index($item);
+        if ($parent.length) {
+            var parent = brickPosition($parent);
+
+            list = parent.list + '.' + parent.index + '.' + list;
+        }
+
+        return {list: list, index: $item.parent().children('.field-repeater-item').index($item)};
+    }
+
+    // "<list>:<index>" of a brick, as the preview marks it
+    function previewKey($item) {
+        var position = brickPosition($item);
+
+        return position.list + ':' + position.index;
     }
 
     function showInPreview($form) {
