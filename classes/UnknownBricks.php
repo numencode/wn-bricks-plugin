@@ -20,6 +20,11 @@ class UnknownBricks
     public const ICON = 'icon-question-circle';
 
     /**
+     * The "source" of a placeholder type.
+     */
+    public const SOURCE = 'missing type';
+
+    /**
      * The field showing the notice; it posts nothing, so it's never saved.
      */
     public const NOTICE_FIELD = '_bricks_unknown';
@@ -110,7 +115,15 @@ class UnknownBricks
             description: 'numencode.bricks::lang.unknown.description',
             icon: self::ICON,
             fields: $fields,
-            source: 'missing type',
+            source: self::SOURCE,
         );
+    }
+
+    /**
+     * Whether a type is the placeholder of a missing type (type()).
+     */
+    public static function isUnknown(BrickType $type): bool
+    {
+        return $type->source === self::SOURCE && isset($type->fields[self::NOTICE_FIELD]);
     }
 }

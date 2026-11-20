@@ -24,6 +24,14 @@ class ModelHost extends BrickHost
         return $this->fieldKeys;
     }
 
+    /**
+     * Models use the active theme's brick types (the website's), like their forms (ModelIntegration).
+     */
+    public function theme(): ?\Cms\Classes\Theme
+    {
+        return \Cms\Classes\Theme::getActiveTheme();
+    }
+
     public function sharedFields(): array
     {
         return array_values(array_intersect($this->fieldKeys, $this->sharedKeys));

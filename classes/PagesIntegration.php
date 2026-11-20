@@ -23,7 +23,7 @@ use Winter\Storm\Exception\SystemException;
  */
 class PagesIntegration
 {
-    public const FIELD_TYPE = 'bricks';
+    public const FIELD_TYPE = BrickType::BRICKS_FIELD_TYPE;
 
     /**
      * The tab of Winter.Pages' page settings (layout, hidden, …).

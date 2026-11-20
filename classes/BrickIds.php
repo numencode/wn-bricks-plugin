@@ -52,18 +52,20 @@ class BrickIds
     }
 
     /**
-     * Assigns ids to the bricks of all bricks fields of a static page or model, in every language.
+     * Assigns ids to the bricks of all bricks fields of a static page or model (nested bricks included), in every
+     * language.
      *
      * @param Page|BrickHost $host
      */
     public static function assign(object $host): void
     {
         $host = BrickHost::of($host);
+        $types = $host->types();
 
         foreach ($host->fields() as $field) {
             $bricks = $host->current($field);
 
-            if ($bricks && ($assigned = static::bricks($bricks)) !== $bricks) {
+            if ($bricks && ($assigned = static::bricks($bricks, $types)) !== $bricks) {
                 $host->setCurrent($field, $assigned);
             }
 
@@ -74,7 +76,7 @@ class BrickIds
             foreach ($host->otherLocales() as $locale) {
                 $translated = $host->translated($field, $locale);
 
-                if ($translated && ($assigned = static::bricks($translated)) !== $translated) {
+                if ($translated && ($assigned = static::bricks($translated, $types)) !== $translated) {
                     $host->setTranslated($field, $assigned, $locale);
                 }
             }
@@ -82,15 +84,28 @@ class BrickIds
     }
 
     /**
-     * A list of bricks with an id on every brick (unique within the list).
+     * A list of bricks with an id on every brick, unique within the list and its nested lists (bricks inside bricks,
+     * walked with $types; without them only the list itself).
      *
      * @param array<int|string, mixed> $bricks
+     * @param array<string, BrickType> $types
      * @return array<int|string, mixed>
      */
-    public static function bricks(array $bricks): array
+    public static function bricks(array $bricks, array $types = []): array
     {
         $seen = [];
 
+        return static::assignIds($bricks, $types, $seen);
+    }
+
+    /**
+     * @param array<int|string, mixed> $bricks
+     * @param array<string, BrickType> $types
+     * @param array<string, bool> $seen The ids given so far (in the whole tree)
+     * @return array<int|string, mixed>
+     */
+    protected static function assignIds(array $bricks, array $types, array &$seen): array
+    {
         foreach ($bricks as $index => $brick) {
             if (!is_array($brick)) {
                 continue;
@@ -104,10 +119,15 @@ class BrickIds
                 } while (isset($seen[$id]));
 
                 $brick[FieldBuilder::ID_FIELD] = $id;
-                $bricks[$index] = $brick;
             }
 
             $seen[$id] = true;
+
+            foreach (BrickTree::children($brick, $types) as $name => $list) {
+                $brick[$name] = static::assignIds($list, $types, $seen);
+            }
+
+            $bricks[$index] = $brick;
         }
 
         return $bricks;

@@ -84,7 +84,7 @@ class ConvertPages extends BricksCommand
 
                 if (!$dryRun) {
                     // The file is written directly (not saved by a model), so the ids are assigned here
-                    $file->setBricks($field, BrickIds::bricks($bricks));
+                    $file->setBricks($field, BrickIds::bricks($bricks, $types));
                     $file->save();
                 }
 

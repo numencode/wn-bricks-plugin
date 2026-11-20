@@ -34,6 +34,12 @@ class FieldBuilder
      */
     public const SHARED_WIDGET = 'sharedbricks';
 
+    /**
+     * How deep bricks may nest by default (config "max_depth"): 2 = a page's bricks and the bricks inside them (e.g. in
+     * the columns of Columns), but no container inside a container.
+     */
+    public const DEFAULT_MAX_DEPTH = 2;
+
     public const DEFAULT_PROMPT = 'numencode.bricks::lang.field.prompt';
 
     public const DEFAULT_LABEL = 'numencode.bricks::lang.field.label';
@@ -67,19 +73,27 @@ class FieldBuilder
      * Repeater groups: code => [name, description, icon, fields]. Names and descriptions stay lang keys; the
      * repeater translates them. Every group also gets the advanced fields (anchor, CSS class), the HIDDEN_FIELD and the ID_FIELD.
      *
+     * A type's nested bricks fields become repeaters of the next level (nestedField()).
+     *
      * @param array<string, BrickType> $types
      * @param array<int, string> $readOnly Codes of the types whose fields are read-only
+     * @param int $depth The level of the bricks field these groups belong to (1 = a page's or model's field)
      * @return array<string, array<string, mixed>>
      */
-    public static function groups(array $types, array $readOnly = []): array
+    public static function groups(array $types, array $readOnly = [], int $depth = 1): array
     {
         $groups = [];
 
         foreach ($types as $code => $type) {
             $fields = $type->isComponent() ? ComponentBricks::fields($type) : $type->fields;
+            $isReadOnly = in_array($code, $readOnly, true);
 
-            if (in_array($code, $readOnly, true)) {
+            if ($isReadOnly) {
                 $fields = array_map(fn (array $field) => ['readOnly' => true] + $field, $fields);
+            }
+
+            foreach ($type->bricksFields() as $name => $config) {
+                $fields[$name] = static::nestedField($config, $types, $readOnly, $depth + 1, $isReadOnly);
             }
 
             $fields += static::advancedFields();
@@ -103,6 +117,64 @@ class FieldBuilder
         }
 
         return $groups;
+    }
+
+    /**
+     * A nested bricks field (`type: bricks` in a brick type) at level $depth: a repeater offering the types its
+     * allow/ignore select, except the read-only (denied) ones and those of missing types (and the containers at the
+     * last level, see field()). Its groups are all $types, so every stored brick keeps its values.
+     *
+     * Beyond the last level (a container stored deeper than max_depth allows now) and in a read-only brick, the field
+     * only posts its stored value back unchanged.
+     *
+     * @param array<string, mixed> $config
+     * @param array<string, BrickType> $types
+     * @param array<int, string> $readOnly
+     * @return array<string, mixed>
+     */
+    public static function nestedField(array $config, array $types, array $readOnly, int $depth, bool $keepValue = false): array
+    {
+        if ($keepValue || $depth > static::maxDepth()) {
+            return [
+                'type'     => 'partial',
+                'path'     => '$/numencode/bricks/classes/unknownbricks/_value.php',
+                'cssClass' => 'bricks-unknown-value',
+            ];
+        }
+
+        $offered = static::filter(
+            $types,
+            static::codes($config['allow'] ?? []),
+            array_merge(static::codes($config['ignore'] ?? []), $readOnly),
+        );
+        $offered = array_filter($offered, fn (BrickType $type) => !UnknownBricks::isUnknown($type));
+
+        return static::field($config, $offered, $types, $readOnly, [], $depth);
+    }
+
+    /**
+     * The types selected by allow (all when empty; in the allowed order) and ignore.
+     *
+     * @param array<string, BrickType> $types
+     * @param array<int, string> $allow
+     * @param array<int, string> $ignore
+     * @return array<string, BrickType>
+     */
+    public static function filter(array $types, array $allow = [], array $ignore = []): array
+    {
+        if ($allow) {
+            $types = array_filter(array_map(fn (string $code) => $types[$code] ?? null, array_combine($allow, $allow)));
+        }
+
+        return array_diff_key($types, array_flip($ignore));
+    }
+
+    /**
+     * How deep bricks may nest (config "max_depth", at least 1 = no nesting).
+     */
+    public static function maxDepth(): int
+    {
+        return max(1, (int) \Config::get('numencode.bricks::max_depth', self::DEFAULT_MAX_DEPTH));
     }
 
     /**
@@ -145,29 +217,44 @@ class FieldBuilder
      *
      * The groups are ordered by section (see sections()): the general types first, then each plugin's types.
      *
+     * Bricks inside bricks: a type's own bricks fields become repeaters too (groups(), nestedField()), down to the level
+     * maxDepth(); at that level the types holding bricks (containers) aren't offered.
+     *
      * @param array<string, mixed> $config The bricks field definition
      * @param array<string, BrickType> $offered The brick types offered in the "Add brick" list (in this order)
      * @param array<string, BrickType>|null $all All brick types (default: the offered ones)
      * @param array<int, string> $readOnly Codes of the types the user may not edit
      * @param array<string, mixed> $client More settings for assets/js/bricks.js (see clientConfig())
+     * @param int $depth The field's level: 1 = a page's or model's field, 2 = a bricks field inside a brick, …
      * @return array<string, mixed>
      */
-    public static function field(array $config, array $offered, ?array $all = null, array $readOnly = [], array $client = []): array
+    public static function field(array $config, array $offered, ?array $all = null, array $readOnly = [], array $client = [], int $depth = 1): array
     {
         $field = array_diff_key($config, array_flip(self::OWN_OPTIONS));
         $types = static::sortBySection($offered + ($all ?? []));
+
+        // At the last level (config "max_depth") no brick may hold more bricks
+        if ($depth >= static::maxDepth()) {
+            $offered = array_filter($offered, fn (BrickType $type) => !$type->isContainer());
+        }
+
         $hidden = array_keys(array_diff_key($types, $offered));
 
         $field = array_merge(
             ['label' => self::DEFAULT_LABEL, 'prompt' => self::DEFAULT_PROMPT, 'style' => 'collapsed'],
             array_filter($field, fn ($value) => $value !== null && $value !== ''),
             [
-                'type'   => static::isShared($config) ? self::SHARED_WIDGET : 'repeater',
-                'groups' => self::groups($types, $readOnly),
+                // A nested list belongs to its brick, so it is translated with it
+                'type'   => $depth === 1 && static::isShared($config) ? self::SHARED_WIDGET : 'repeater',
+                'groups' => self::groups($types, $readOnly, $depth),
             ],
         );
 
         $attributes = ['data-bricks' => static::clientConfig($types, $client)];
+
+        if ($depth > 1) {
+            $attributes['data-bricks-depth'] = $depth;
+        }
 
         if ($hidden) {
             $attributes['data-bricks-hidden'] = implode(',', $hidden);

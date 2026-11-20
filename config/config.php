@@ -15,4 +15,17 @@ return [
     |
     */
     'snippets' => true,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Bricks inside bricks
+    |--------------------------------------------------------------------------
+    |
+    | How deep bricks may nest. A brick type holds other bricks with a field "type: bricks" (e.g. the
+    | columns of Columns). 2: a page's bricks and the bricks inside them, but no brick holding bricks
+    | inside another one; 1: no nesting (such types aren't offered). Bricks stored deeper keep their
+    | content, but it can't be edited.
+    |
+    */
+    'max_depth' => 2,
 ];

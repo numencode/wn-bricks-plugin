@@ -29,6 +29,11 @@ final class BrickType
     public const DEFAULT_ICON = 'icon-cube';
 
     /**
+     * The field type of a bricks field (a layout variable, a model field or a field of a brick type: nested bricks).
+     */
+    public const BRICKS_FIELD_TYPE = 'bricks';
+
+    /**
      * @param array<string, array<string, mixed>> $fields Backend form field definitions
      * @param string|null $component Component class of a component brick
      * @param string|null $markupPath The type's own markup file (a theme partial takes precedence when rendering)
@@ -164,6 +169,29 @@ final class BrickType
     public function isComponent(): bool
     {
         return $this->component !== null;
+    }
+
+    /**
+     * The type's nested bricks fields (`type: bricks` among its own fields; not inside other fields): name =>
+     * definition. Component bricks have none.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    public function bricksFields(): array
+    {
+        if ($this->isComponent()) {
+            return [];
+        }
+
+        return array_filter($this->fields, fn (array $field) => ($field['type'] ?? null) === self::BRICKS_FIELD_TYPE);
+    }
+
+    /**
+     * Whether bricks of this type hold other bricks (a nested bricks field, e.g. the columns of Columns).
+     */
+    public function isContainer(): bool
+    {
+        return $this->bricksFields() !== [];
     }
 
     /**

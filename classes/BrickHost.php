@@ -38,6 +38,21 @@ abstract class BrickHost
     }
 
     /**
+     * The theme whose brick types the fields use.
+     */
+    abstract public function theme(): ?\Cms\Classes\Theme;
+
+    /**
+     * All brick types of the host's theme (BrickRegistry), e.g. to walk nested bricks (BrickTree).
+     *
+     * @return array<string, BrickType>
+     */
+    public function types(): array
+    {
+        return BrickRegistry::instance()->all($this->theme());
+    }
+
+    /**
      * The keys of the bricks fields.
      *
      * @return array<int, string>

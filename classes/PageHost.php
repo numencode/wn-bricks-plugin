@@ -25,6 +25,11 @@ class PageHost extends BrickHost
         return $this->fieldKeys ??= BrickRenderer::fieldNames($this->model);
     }
 
+    public function theme(): ?\Cms\Classes\Theme
+    {
+        return $this->model->getThemeAttribute() ?? \Cms\Classes\Theme::getEditTheme();
+    }
+
     public function sharedFields(): array
     {
         return array_values(array_intersect($this->fields(), BrickRenderer::sharedFieldNames($this->model)));
