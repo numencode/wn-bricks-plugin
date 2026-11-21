@@ -10,6 +10,9 @@ fields:
         label: numencode.bricks::lang.fields.url
         comment: numencode.bricks::lang.fields.url_comment
         type: text
+        # Each language can link to its own page; a link is never sent to machine translation
+        translatable: true
+        machineTranslation: false
     style:
         label: numencode.bricks::lang.fields.style
         type: dropdown

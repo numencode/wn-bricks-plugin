@@ -85,7 +85,7 @@ class FieldBuilder
         $groups = [];
 
         foreach ($types as $code => $type) {
-            $fields = $type->isComponent() ? ComponentBricks::fields($type) : $type->fields;
+            $fields = static::withoutMachineTranslation($type->isComponent() ? ComponentBricks::fields($type) : $type->fields);
             $isReadOnly = in_array($code, $readOnly, true);
 
             if ($isReadOnly) {
@@ -118,6 +118,37 @@ class FieldBuilder
         }
 
         return $groups;
+    }
+
+    /**
+     * Fields with `translatable: true` and `machineTranslation: false` (e.g. the button's link): Winter.Translate's
+     * multilingual repeater machine-translates every `translatable` field of its groups on "copy from" – matched by the
+     * field name in every group –, so the flag is replaced by SharedTranslations::MANUAL_OPTION, which only a shared
+     * structure reads. Also in the forms of a type's repeaters (their items).
+     *
+     * @param array<string, mixed> $fields
+     * @return array<string, mixed>
+     */
+    public static function withoutMachineTranslation(array $fields): array
+    {
+        foreach ($fields as $name => $config) {
+            if (!is_array($config)) {
+                continue;
+            }
+
+            if (!empty($config['translatable']) && ($config[SharedTranslations::MACHINE_OPTION] ?? true) === false) {
+                unset($config['translatable']);
+                $config[SharedTranslations::MANUAL_OPTION] = true;
+            }
+
+            if (is_array($config['form']['fields'] ?? null)) {
+                $config['form']['fields'] = static::withoutMachineTranslation($config['form']['fields']);
+            }
+
+            $fields[$name] = $config;
+        }
+
+        return $fields;
     }
 
     /**

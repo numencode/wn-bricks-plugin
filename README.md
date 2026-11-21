@@ -132,7 +132,7 @@ added, but existing ones are shown and saved unchanged.
 | Image | `image` | `image`, `alt`, `caption`, `width` (content, wide, full) |
 | Gallery | `gallery` | `images` (image, alt, caption), `columns` (2, 3, 4) |
 | Columns | `columns` | `columns` (2, 3), `column_1` … `column_3` (bricks inside: a list of bricks per column) |
-| Button | `button` | `text`, `url`, `style` (primary, secondary, link), `new_window` |
+| Button | `button` | `text`, `url` (translatable, not machine-translated), `style` (primary, secondary, link), `new_window` |
 | Quote | `quote` | `quote`, `author`, `source` |
 | Video | `video` | `url` (YouTube, embedded from youtube-nocookie.com, or Vimeo), `title` |
 | Divider | `divider` | – |
@@ -158,6 +158,11 @@ fields:                             # standard backend form fields
         label: Text
         type: textarea
         translatable: true          # machine-translated with Winter.Translate's "copy from"
+    link:
+        label: Link
+        type: text
+        translatable: true          # each language can link to its own page …
+        machineTranslation: false   # … but a link is never sent to machine translation
     style:
         label: Style
         type: dropdown
@@ -185,6 +190,12 @@ fields:                             # standard backend form fields
 | `editUrl` | A backend URL where the brick's content is edited, with `{field}` placeholders, e.g. `acme/shop/products/update/{product}`. |
 
 The field names `_group`, `_hidden`, `_anchor`, `_class`, `_id` and `brick` are reserved.
+
+**Translatable fields:** `translatable: true` marks the fields other languages translate in a
+[shared structure](#shared-structure-translation-fields); they are also the ones machine-translated (Winter.Translate's
+"copy from", Bricks' translate buttons). Add `machineTranslation: false` to a translatable field that must be
+translated by hand only, such as a link, an e-mail address or a code: it is editable per language, but never sent to a
+translation provider.
 
 **Markup variables:** every field by its name, the page's variables, and `brick`:
 

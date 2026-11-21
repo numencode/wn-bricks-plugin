@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The field option `machineTranslation: false`: a `translatable: true` field (e.g. a link) is translated by hand only –
+  editable per language in a shared structure, but never sent to machine translation (Winter.Translate's "copy from",
+  the translate buttons of a shared structure).
+
+### Changed
+
+- The button's link (`url`) is translatable, so in a shared structure each language can link to its own page. It is
+  not machine-translated.
+
 ## [1.0.0] - 2026-11-21
 
 The first release.

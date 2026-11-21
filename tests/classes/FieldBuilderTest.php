@@ -26,6 +26,24 @@ class FieldBuilderTest extends BricksTestCase
         $this->assertSame('partial', $groups['quote']['fields'][FieldBuilder::HIDDEN_FIELD]['type'], 'every group can be hidden');
     }
 
+    public function testFieldsWithoutMachineTranslationAreNotTranslatableForTheMultilingualRepeater(): void
+    {
+        $this->useFixtureTheme();
+        $fields = FieldBuilder::groups(BrickRegistry::instance()->filter(['button']))['button']['fields'];
+
+        // The button's text is machine-translated on "copy from", its link isn't (Translate matches by field name)
+        $this->assertTrue($fields['text']['translatable']);
+        $this->assertArrayNotHasKey('translatable', $fields['url']);
+        $this->assertTrue($fields['url'][\NumenCode\Bricks\Classes\SharedTranslations::MANUAL_OPTION]);
+
+        $items = FieldBuilder::withoutMachineTranslation(['images' => ['type' => 'repeater', 'form' => ['fields' => [
+            'link'    => ['type' => 'text', 'translatable' => true, 'machineTranslation' => false],
+            'caption' => ['type' => 'text', 'translatable' => true],
+        ]]]]);
+        $this->assertArrayNotHasKey('translatable', $items['images']['form']['fields']['link'], 'also in a repeater\'s items');
+        $this->assertTrue($items['images']['form']['fields']['caption']['translatable']);
+    }
+
     public function testFieldBecomesARepeaterWithDefaults(): void
     {
         $this->useFixtureTheme();

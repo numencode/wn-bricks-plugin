@@ -90,6 +90,12 @@ class SharedBricks extends Repeater
     protected array $translatable = [];
 
     /**
+     * @var array<string, array<int, string>>|null The translatable fields that may be machine-translated (as
+     * $translatable, without `machineTranslation: false`)
+     */
+    protected ?array $machineTranslatable = null;
+
+    /**
      * @var array<int, array<string, mixed>> The default language's bricks while another language is shown
      */
     protected array $structure = [];
@@ -286,12 +292,13 @@ class SharedBricks extends Repeater
             $id = (string) ($brick[FieldBuilder::ID_FIELD] ?? '');
             $code = (string) ($brick['_group'] ?? '');
             $selected = $inTarget || $target === self::TRANSLATE_ALL || $target === $id;
-            // The brick, and the items of its repeaters with translatable fields
-            $units = [[$brick, $this->translatable[$code] ?? []]];
+            // The brick, and the items of its repeaters with translatable fields (only those for machine translation)
+            $machine = $this->machineTranslatable ??= SharedTranslations::translatableByGroup((array) $this->getConfig('groups', []), true);
+            $units = [[$brick, $machine[$code] ?? []]];
 
             foreach (SharedTranslations::itemLists($brick) as $name => $items) {
                 foreach ($items as $item) {
-                    $units[] = [$item, $this->translatable[$code . SharedTranslations::ITEM_SEPARATOR . $name] ?? []];
+                    $units[] = [$item, $machine[$code . SharedTranslations::ITEM_SEPARATOR . $name] ?? []];
                 }
             }
 

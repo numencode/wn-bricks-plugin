@@ -28,19 +28,55 @@ class SharedTranslations
     public const ITEM_SEPARATOR = '.';
 
     /**
-     * The names of a brick type's translatable fields (its own fields).
+     * A field option: `machineTranslation: false` keeps a translatable field (e.g. a link) away from machine
+     * translation – it is translated by hand only.
+     */
+    public const MACHINE_OPTION = 'machineTranslation';
+
+    /**
+     * Set by FieldBuilder::groups() on a translatable field that must not be machine-translated, in place of
+     * `translatable` (Winter.Translate machine-translates every `translatable` field of a repeater's groups on "copy
+     * from"). The field stays translatable in a shared structure.
+     */
+    public const MANUAL_OPTION = 'bricksTranslatable';
+
+    /**
+     * Whether a field definition is translatable (`translatable: true`, also when only translated by hand).
+     *
+     * @param array<string, mixed> $config
+     */
+    public static function isTranslatable(array $config): bool
+    {
+        return !empty($config['translatable']) || !empty($config[self::MANUAL_OPTION]);
+    }
+
+    /**
+     * Whether a translatable field may be machine-translated (not `machineTranslation: false`).
+     *
+     * @param array<string, mixed> $config
+     */
+    public static function isMachineTranslatable(array $config): bool
+    {
+        return static::isTranslatable($config)
+            && empty($config[self::MANUAL_OPTION])
+            && ($config[self::MACHINE_OPTION] ?? true) !== false;
+    }
+
+    /**
+     * The names of a brick type's translatable fields (its own fields); $machine: only those that may be
+     * machine-translated.
      *
      * @param array<string, mixed> $fields A repeater group's (or brick type's) field definitions
      * @return array<int, string>
      */
-    public static function translatableFields(array $fields): array
+    public static function translatableFields(array $fields, bool $machine = false): array
     {
         $names = [];
 
         foreach ($fields as $name => $config) {
             if (
                 is_array($config)
-                && !empty($config['translatable'])
+                && ($machine ? static::isMachineTranslatable($config) : static::isTranslatable($config))
                 && !in_array($name, BrickType::RESERVED_FIELDS, true)
             ) {
                 $names[] = (string) $name;
@@ -57,7 +93,7 @@ class SharedTranslations
      * @param array<string, mixed> $fields
      * @return array<string, array<int, string>>
      */
-    public static function itemFields(array $fields): array
+    public static function itemFields(array $fields, bool $machine = false): array
     {
         $items = [];
 
@@ -72,7 +108,7 @@ class SharedTranslations
                 continue;
             }
 
-            if ($names = static::translatableFields($config['form']['fields'])) {
+            if ($names = static::translatableFields($config['form']['fields'], $machine)) {
                 $items[(string) $name] = $names;
             }
         }
@@ -86,11 +122,11 @@ class SharedTranslations
      * @param array<string, mixed> $fields
      * @return array<string, array<int, string>>
      */
-    public static function translatableOf(string $code, array $fields): array
+    public static function translatableOf(string $code, array $fields, bool $machine = false): array
     {
-        $translatable = [$code => static::translatableFields($fields)];
+        $translatable = [$code => static::translatableFields($fields, $machine)];
 
-        foreach (static::itemFields($fields) as $name => $names) {
+        foreach (static::itemFields($fields, $machine) as $name => $names) {
             $translatable[$code . self::ITEM_SEPARATOR . $name] = $names;
         }
 
@@ -98,17 +134,18 @@ class SharedTranslations
     }
 
     /**
-     * The translatable fields of every repeater group (see translatableOf()).
+     * The translatable fields of every repeater group (see translatableOf()); $machine: only those that may be
+     * machine-translated.
      *
      * @param array<string, array<string, mixed>> $groups code => group definition (with "fields")
      * @return array<string, array<int, string>>
      */
-    public static function translatableByGroup(array $groups): array
+    public static function translatableByGroup(array $groups, bool $machine = false): array
     {
         $translatable = [];
 
         foreach ($groups as $code => $group) {
-            $translatable += static::translatableOf((string) $code, (array) ($group['fields'] ?? []));
+            $translatable += static::translatableOf((string) $code, (array) ($group['fields'] ?? []), $machine);
         }
 
         return $translatable;

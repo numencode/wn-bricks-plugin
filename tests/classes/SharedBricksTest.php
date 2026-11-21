@@ -58,7 +58,7 @@ class SharedBricksTest extends BricksTestCase
     {
         $field = new FormField('viewBag[bricks]', 'Bricks');
         $field->value = $page->viewBag['bricks'] ?? null;
-        $offered = BrickRegistry::instance()->filter(['text', 'quote', 'spacer', 'box', 'gallery'], [], $this->theme);
+        $offered = BrickRegistry::instance()->filter(['text', 'quote', 'spacer', 'box', 'gallery', 'button'], [], $this->theme);
         // A brick type that no longer exists, as PagesIntegration adds it for stored bricks
         $config = FieldBuilder::field(
             ['type' => 'bricks', 'translation' => 'fields'],
@@ -412,6 +412,36 @@ class SharedBricksTest extends BricksTestCase
 
         $this->assertSame($structure, $saved);
         $this->assertSame(['i1' => ['caption' => 'Prvi']], $page->getTranslateAttributes('sl')['viewBag']['bricks_translations']);
+    }
+
+    public function testTheButtonsLinkIsTranslatedByHandOnly(): void
+    {
+        require_once $this->fixturePath('providers/FakeProvider.php');
+        \NumenCode\Bricks\Tests\Fixtures\Providers\FakeProvider::$calls = [];
+        config(['winter.translate::providers' => [
+            'fake' => ['class' => \NumenCode\Bricks\Tests\Fixtures\Providers\FakeProvider::class, 'key' => 'test'],
+        ]]);
+
+        $structure = [['_group' => 'button', '_id' => 'b1', 'text' => 'About us', 'url' => '/about', 'style' => 'primary']];
+        $this->postForm([
+            'viewBag'                     => ['bricks' => [['_group' => 'button', '_id' => 'b1', 'text' => '', 'url' => '/sl/o-nas', 'style' => 'primary']]],
+            self::ALIAS . '_locale'       => 'sl',
+            self::ALIAS . '_structure'    => json_encode($structure),
+            self::ALIAS . '_translations' => ['sl' => '{}'],
+            '_bricks_translate'           => 'b1',
+            '_provider'                   => 'fake',
+        ]);
+
+        $widget = $this->widget($this->page());
+        $fields = (new \ReflectionProperty(\Backend\FormWidgets\Repeater::class, 'formWidgets'))->getValue($widget)[0]->fields;
+
+        $this->assertSame('/about', $fields['url']['placeholder'], 'editable in another language');
+        $this->assertArrayNotHasKey('readOnly', $fields['url']);
+
+        $translations = $this->renderedTranslations($widget->onTranslateBricks());
+
+        $this->assertSame([['About us']], \NumenCode\Bricks\Tests\Fixtures\Providers\FakeProvider::$calls, 'the link is not sent to the provider');
+        $this->assertSame(['b1' => ['text' => '[sl from en] About us', 'url' => '/sl/o-nas']], $translations);
     }
 
     public function testWithoutAProviderNothingIsTranslated(): void

@@ -155,6 +155,26 @@ class SharedTranslationsTest extends BricksTestCase
         $this->assertSame('', $editor[0]['inner'][0]['text'], 'untranslated nested fields are emptied in the editor too');
     }
 
+    public function testFieldsWithoutMachineTranslationAreTranslatedByHandOnly(): void
+    {
+        $fields = [
+            'text'  => ['type' => 'text', 'translatable' => true],
+            'url'   => ['type' => 'text', 'translatable' => true, 'machineTranslation' => false],
+            'style' => ['type' => 'dropdown'],
+            'items' => ['type' => 'repeater', 'form' => ['fields' => [
+                'link' => ['type' => 'text', 'translatable' => true, 'machineTranslation' => false],
+            ]]],
+        ];
+
+        $this->assertSame(['button' => ['text', 'url'], 'button.items' => ['link']], SharedTranslations::translatableOf('button', $fields));
+        $this->assertSame(['button' => ['text']], SharedTranslations::translatableOf('button', $fields, true));
+
+        // As FieldBuilder::groups() passes them on: still translatable, never machine-translated
+        $built = \NumenCode\Bricks\Classes\FieldBuilder::withoutMachineTranslation($fields);
+        $this->assertSame(['button' => ['text', 'url'], 'button.items' => ['link']], SharedTranslations::translatableOf('button', $built));
+        $this->assertSame(['button' => ['text']], SharedTranslations::translatableOf('button', $built, true));
+    }
+
     public function testRepeaterItemsWithIdsAreTranslatedPerItem(): void
     {
         $fields = [
